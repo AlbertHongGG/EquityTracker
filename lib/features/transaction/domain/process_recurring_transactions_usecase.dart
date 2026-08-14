@@ -9,9 +9,14 @@ class ProcessRecurringTransactionsUseCase {
 
   ProcessRecurringTransactionsUseCase(this._repository);
 
+  bool _isProcessing = false;
+
   Future<List<TransactionModel>> execute() async {
-    final List<TransactionModel> generatedTransactions = [];
-    final recurringList = await _repository.getEnabledRecurringTransactions();
+    if (_isProcessing) return [];
+    _isProcessing = true;
+    try {
+      final List<TransactionModel> generatedTransactions = [];
+      final recurringList = await _repository.getEnabledRecurringTransactions();
     final now = DateTime.now();
 
     for (var recurring in recurringList) {
@@ -76,6 +81,9 @@ class ProcessRecurringTransactionsUseCase {
       }
     }
 
-    return generatedTransactions;
+      return generatedTransactions;
+    } finally {
+      _isProcessing = false;
+    }
   }
 }

@@ -53,19 +53,27 @@ class RecurringTransactionListNotifier extends AsyncNotifier<List<RecurringTrans
     await future;
   }
 
+  bool _isProcessing = false;
+
   Future<void> checkAndProcess() async {
-    final generated = await ref.read(processRecurringTransactionsUseCaseProvider).execute();
-    if (generated.isNotEmpty) {
-      ref.invalidate(transactionListProvider);
-      final list = await _fetchExistingRecurringTransactions();
-      state = AsyncValue.data(list);
-      _scheduleNextTrigger(list);
-      
-      // 發送獨立的推播通知
-      final appNotifService = ref.read(appNotificationServiceProvider);
-      for (final transaction in generated) {
-        await appNotifService.showTransactionAddedNotification(transaction);
+    if (_isProcessing) return;
+    _isProcessing = true;
+    try {
+      final generated = await ref.read(processRecurringTransactionsUseCaseProvider).execute();
+      if (generated.isNotEmpty) {
+        ref.invalidate(transactionListProvider);
+        final list = await _fetchExistingRecurringTransactions();
+        state = AsyncValue.data(list);
+        _scheduleNextTrigger(list);
+        
+        // 發送獨立的推播通知
+        final appNotifService = ref.read(appNotificationServiceProvider);
+        for (final transaction in generated) {
+          await appNotifService.showTransactionAddedNotification(transaction);
+        }
       }
+    } finally {
+      _isProcessing = false;
     }
   }
 

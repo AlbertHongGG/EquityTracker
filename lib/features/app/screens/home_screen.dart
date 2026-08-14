@@ -71,7 +71,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     setState(() {
       _selectedIndex = index;
     });
-    ref.read(recurringTransactionListProvider.notifier).checkAndProcess();
   }
 
   @override
