@@ -185,7 +185,7 @@ class _AutoBookkeepingSettingsScreenState
                         context: context,
                         categories: expenseCategories,
                         selectedCategoryId: state.defaultCategoryId,
-                        title: '選擇預設支出分類',
+                        title: '預設支出分類',
                         onCategorySelected: (catId) {
                           ref
                               .read(autoBookkeepingNotifierProvider.notifier)
