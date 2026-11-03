@@ -77,12 +77,7 @@ class _RuleEditBottomSheetState extends State<RuleEditBottomSheet> {
     _pkgCtrl = TextEditingController(text: rule?.packageNames.join(', ') ?? '');
     _selectedCategoryId = rule?.defaultCategoryId;
 
-    // 當機構名稱改變且入帳標題為空時，自動輔助填寫
-    _nameCtrl.addListener(() {
-      if (widget.initialRule == null && _txTitleCtrl.text.isEmpty && _nameCtrl.text.isNotEmpty) {
-        _txTitleCtrl.text = '${_nameCtrl.text}刷卡';
-      }
-    });
+
   }
 
   @override

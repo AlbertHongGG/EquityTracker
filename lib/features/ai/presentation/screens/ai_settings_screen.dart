@@ -9,6 +9,7 @@ import 'package:equity_tracker/core/widgets/app_switch.dart';
 import 'package:equity_tracker/core/widgets/premium_config_card.dart';
 import 'package:equity_tracker/core/widgets/premium_config_header.dart';
 import 'package:equity_tracker/core/widgets/immersive_scaffold.dart';
+import 'package:equity_tracker/core/widgets/sheet/lens_wise_sheet_handle.dart';
 
 class AiSettingsScreen extends ConsumerStatefulWidget {
   const AiSettingsScreen({super.key});
@@ -142,71 +143,82 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
   }
 
   void _showProviderSelectorBottomSheet(AIConfigState state, bool isDark) {
+    final titleColor = isDark
+        ? Colors.white.withOpacity(0.54)
+        : Colors.black.withOpacity(0.54);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(2),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 1. LensWise 頂部把手 (32dp 置中)
+                  LensWiseSheetHandle(isDark: isDark),
+
+                  // 2. LensWise Header 導航列 (1:1 左右對稱 + 13sp 字距 2.0 粗體置中標題)
+                  Row(
+                    children: [
+                      const SizedBox(width: 48), // 左側 Spacer 平衡
+                      Expanded(
+                        child: Text(
+                          'AI ENGINE',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2.0,
+                            color: titleColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 48), // 右側 Spacer 平衡
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  ...AIProviderType.values.map((type) {
+                    final isSelected = state.providerType == type;
+                    return ListTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      tileColor: isSelected ? Theme.of(context).primaryColor.withValues(alpha: 0.1) : null,
+                      leading: Icon(
+                        _getProviderIcon(type),
+                        color: isSelected ? Theme.of(context).primaryColor : (isDark ? Colors.white54 : Colors.black54),
+                      ),
+                      title: Text(
+                        type.name.toUpperCase(),
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? Theme.of(context).primaryColor : (isDark ? Colors.white : Colors.black),
+                        ),
+                      ),
+                      trailing: isSelected 
+                        ? Icon(Icons.check_circle_rounded, color: Theme.of(context).primaryColor)
+                        : null,
+                      onTap: () {
+                        _lastProviderType = null;
+                        ref.read(aiConfigControllerProvider.notifier).saveConfig(providerType: type);
+                        Navigator.pop(context);
+                      },
+                    );
+                  }),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 24),
-              Text(
-                'AI Engine',
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...AIProviderType.values.map((type) {
-                final isSelected = state.providerType == type;
-                return ListTile(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  tileColor: isSelected ? Theme.of(context).primaryColor.withValues(alpha: 0.1) : null,
-                  leading: Icon(
-                    _getProviderIcon(type),
-                    color: isSelected ? Theme.of(context).primaryColor : (isDark ? Colors.white54 : Colors.black54),
-                  ),
-                  title: Text(
-                    type.name.toUpperCase(),
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? Theme.of(context).primaryColor : (isDark ? Colors.white : Colors.black),
-                    ),
-                  ),
-                  trailing: isSelected 
-                    ? Icon(Icons.check_circle_rounded, color: Theme.of(context).primaryColor)
-                    : null,
-                  onTap: () {
-                    _lastProviderType = null;
-                    ref.read(aiConfigControllerProvider.notifier).saveConfig(providerType: type);
-                    Navigator.pop(context);
-                  },
-                );
-              }),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
         );
       }
