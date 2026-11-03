@@ -1,20 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:equity_tracker/features/transaction/screens/transaction_list/transaction_list_screen.dart';
 import 'package:equity_tracker/features/stats/screens/stats_screen.dart';
 import 'package:equity_tracker/features/transaction/screens/recurring_transactions/recurring_transactions_screen.dart';
-import 'package:go_router/go_router.dart';
 import 'package:equity_tracker/features/app/widgets/main_bottom_nav.dart';
-import 'package:equity_tracker/core/widgets/scale_button.dart';
 import 'package:equity_tracker/core/theme/app_colors.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/features/updater/presentation/providers/updater_notifier.dart';
 import 'package:equity_tracker/features/transaction/providers/recurring_transaction_notifier.dart';
+import 'package:equity_tracker/features/transaction/providers/transaction_notifier.dart';
 import 'package:equity_tracker/features/updater/presentation/widgets/github_updater_bottom_sheet.dart';
 
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -40,15 +39,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     Future.microtask(() async {
       ref.read(systemNotificationServiceProvider);
       ref.read(recurringTransactionListProvider.notifier).checkAndProcess();
+
+      // 初始化自動記帳監聽服務 (設定監聽 Native Channel)
+      await ref.read(notificationAutoBookkeepingServiceProvider).init();
+
       _checkUpdate();
     });
   }
 
   Future<void> _checkUpdate() async {
     // Check update in background, it won't block UI
-      await ref.read(githubUpdaterNotifierProvider.notifier).checkForUpdate();
-      
-      final updateState = ref.read(githubUpdaterNotifierProvider);
+    await ref.read(githubUpdaterNotifierProvider.notifier).checkForUpdate();
+    
+    final updateState = ref.read(githubUpdaterNotifierProvider);
     if (updateState.hasUpdate && updateState.releaseInfo != null) {
       showGithubUpdaterBottomSheet(context);
     }
@@ -64,6 +67,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(recurringTransactionListProvider.notifier).checkAndProcess();
+      // App 回到前景時，自動刷新帳務列表（以反映背景原生管線寫入的新交易）
+      ref.invalidate(transactionListProvider);
+      ref.read(autoBookkeepingNotifierProvider.notifier).checkPermission();
     }
   }
 

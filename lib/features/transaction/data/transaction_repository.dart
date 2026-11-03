@@ -9,6 +9,17 @@ import 'package:equity_tracker/core/enums/sync_status.dart';
 class TransactionRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
+  Future<TransactionModel?> getTransactionById(int id) async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'transactions',
+      where: 'id = ? AND syncStatus != ?',
+      whereArgs: [id, SyncStatus.pendingDelete.name],
+    );
+    if (maps.isEmpty) return null;
+    return TransactionModel.fromMap(maps.first);
+  }
+
   Future<List<TransactionModel>> getAllTransactions() async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(

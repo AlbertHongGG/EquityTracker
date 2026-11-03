@@ -259,7 +259,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
 
                             if (state.categoryId == null && filtered.isNotEmpty) {
                               final defaultCat = filtered.firstWhere(
-                                (c) => c.name == '飲�?',
+                                (c) => c.name == '伙食',
                                 orElse: () => filtered.first,
                               );
                               Future.microtask(() {

@@ -8,15 +8,25 @@ class AppNotificationService {
   final SystemNotificationService _systemNotificationService;
   final CategoryRepository _categoryRepository;
 
-  AppNotificationService(this._systemNotificationService, this._categoryRepository);
+  AppNotificationService(
+    this._systemNotificationService,
+    this._categoryRepository,
+  );
 
-  Future<void> showTransactionAddedNotification(TransactionModel transaction) async {
-    final amountStr = NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(transaction.amount);
+  Future<void> showTransactionAddedNotification(
+    TransactionModel transaction,
+  ) async {
+    final amountStr = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 0,
+    ).format(transaction.amount);
     final typeStr = transaction.type.isIncome ? '收入' : '支出';
-    
+
     // Fetch category name
     String categoryName = '未分類';
-    final category = await _categoryRepository.getCategoryById(transaction.categoryId);
+    final category = await _categoryRepository.getCategoryById(
+      transaction.categoryId,
+    );
     if (category != null) {
       categoryName = category.name;
     }

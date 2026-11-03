@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:equity_tracker/features/notion_sync/domain/sync_state_repository.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/data/auto_bookkeeping_repository.dart';
 
 import 'package:equity_tracker/features/category/data/category_repository.dart';
 import 'package:equity_tracker/features/transaction/data/transaction_repository.dart';
@@ -26,8 +27,14 @@ class NativeBackupService {
   final CategoryRepository _categoryRepo;
   final TransactionRepository _transactionRepo;
   final ISyncStateRepository _syncStateRepo;
+  final AutoBookkeepingRepository? _autoBookkeepingRepo;
 
-  NativeBackupService(this._categoryRepo, this._transactionRepo, this._syncStateRepo);
+  NativeBackupService(
+    this._categoryRepo,
+    this._transactionRepo,
+    this._syncStateRepo, [
+    this._autoBookkeepingRepo,
+  ]);
 
   Future<String> createBackupJson() async {
     final categories = await _categoryRepo.getCategories();
@@ -35,6 +42,7 @@ class NativeBackupService {
     final recurring = await _transactionRepo.getAllRecurringTransactions();
     
     final notionConfig = await _syncStateRepo.exportState();
+    final autoBookkeepingConfig = await _autoBookkeepingRepo?.exportState();
 
     final backupData = {
       'version': 2,
@@ -43,6 +51,7 @@ class NativeBackupService {
       'transactions': transactions.map((t) => t.toMap()).toList(),
       'recurring_transactions': recurring.map((r) => r.toMap()).toList(),
       'notion_config': notionConfig,
+      if (autoBookkeepingConfig != null) 'auto_bookkeeping_config': autoBookkeepingConfig,
     };
 
     const encoder = JsonEncoder.withIndent('  ');
@@ -149,6 +158,12 @@ class NativeBackupService {
       // If the backup doesn't have notion config (e.g. older version), wipe the sync cursor to prevent split-brain
       await _syncStateRepo.resetCursors();
       await _syncStateRepo.importState({'token': null, 'database_id': null});
+    }
+
+    // Restore Auto Bookkeeping Config if present
+    if (json.containsKey('auto_bookkeeping_config') && json['auto_bookkeeping_config'] is Map<String, dynamic>) {
+      final autoConfig = json['auto_bookkeeping_config'] as Map<String, dynamic>;
+      await _autoBookkeepingRepo?.importState(autoConfig);
     }
 
     return BackupRestoreResult(categoriesImported, transactionsImported, recurringTransactionsImported);

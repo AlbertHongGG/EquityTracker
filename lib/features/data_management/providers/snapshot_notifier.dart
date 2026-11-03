@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/core/services/native_backup_service.dart';
 import 'package:equity_tracker/core/providers/repository_providers.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
 
 final nativeBackupServiceProvider = Provider<NativeBackupService>((ref) {
   return NativeBackupService(
     ref.read(categoryRepositoryProvider),
     ref.read(transactionRepositoryProvider),
     ref.read(syncStateRepositoryProvider),
+    ref.read(autoBookkeepingRepositoryProvider),
   );
 });
 

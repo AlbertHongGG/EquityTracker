@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 abstract class SystemNotificationService {
@@ -51,7 +52,7 @@ class SystemNotificationServiceImpl implements SystemNotificationService {
   }
 
   void _onDidReceiveNotificationResponse(NotificationResponse response) {
-    // Handle notification tapped logic here if needed
+    // Handled by plugin
   }
 
   @override
@@ -63,9 +64,9 @@ class SystemNotificationServiceImpl implements SystemNotificationService {
   }) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'recurring_transactions_channel', // id
-      '自動記帳通知', // name
-      channelDescription: '系統自動產生的記帳記錄會在此顯示', // description
+      'recurring_transactions_channel',
+      '自動記帳通知',
+      channelDescription: '系統自動產生的記帳記錄會在此顯示',
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
