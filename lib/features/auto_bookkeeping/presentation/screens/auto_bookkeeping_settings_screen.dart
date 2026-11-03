@@ -11,6 +11,7 @@ import 'package:equity_tracker/features/category/providers/category_notifier.dar
 import 'package:equity_tracker/features/category/data/category_model.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/domain/models/notification_rule.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
+import 'package:equity_tracker/core/widgets/sheet/swipe_to_confirm_drawer.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/category_picker_sheet.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/rule_settings_tile.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/rule_edit_bottom_sheet.dart';
@@ -216,18 +217,22 @@ class _AutoBookkeepingSettingsScreenState
                   return RuleSettingsTile(
                     rule: rule,
                     onTap: () => _openRuleEditor(context, expenseCategories, rule),
+                    onLongPress: () {
+                      SwipeToConfirmDrawer.show(
+                        context: context,
+                        title: 'CLEAR ${rule.name} RULE',
+                        onConfirm: () {
+                          ref
+                              .read(autoBookkeepingNotifierProvider.notifier)
+                              .deleteRule(rule.id);
+                        },
+                      );
+                    },
                     onToggle: (val) {
                       ref
                           .read(autoBookkeepingNotifierProvider.notifier)
                           .toggleRule(rule.id, val);
                     },
-                    onDelete: rule.isSystemPreset
-                        ? null
-                        : () {
-                            ref
-                                .read(autoBookkeepingNotifierProvider.notifier)
-                                .deleteRule(rule.id);
-                          },
                   );
                 }).toList(),
               ),

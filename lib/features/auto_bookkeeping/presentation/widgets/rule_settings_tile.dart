@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:equity_tracker/core/widgets/app_switch.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/domain/models/notification_rule.dart';
 
+/// 記帳規則列表項目 (RuleSettingsTile)
+/// - 右側純粹保留開關 (AppSwitch)，無任何垃圾桶按鈕
+/// - 支援長按 (onLongPress) 觸發滑動刪除抽屜
+/// - 支援點擊 (onTap) 編輯規則
 class RuleSettingsTile extends StatelessWidget {
   final NotificationRule rule;
   final ValueChanged<bool> onToggle;
-  final VoidCallback? onDelete;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   const RuleSettingsTile({
     super.key,
     required this.rule,
     required this.onToggle,
-    this.onDelete,
     this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -27,16 +31,17 @@ class RuleSettingsTile extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            // Icon Bubble (對齊 SettingsTile 風格)
+            // Icon Bubble
             Container(
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: baseColor.withValues(alpha: 0.12),
+                color: baseColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -74,17 +79,7 @@ class RuleSettingsTile extends StatelessWidget {
                 ],
               ),
             ),
-            // Trailing Actions
-            if (!rule.isSystemPreset && onDelete != null)
-              IconButton(
-                icon: const Icon(
-                  Icons.delete_outline_rounded,
-                  color: Colors.redAccent,
-                  size: 20,
-                ),
-                onPressed: onDelete,
-                visualDensity: VisualDensity.compact,
-              ),
+            // Trailing Switch (無垃圾桶按鈕，簡約俐落)
             AppSwitch(
               value: rule.isEnabled,
               onChanged: onToggle,
