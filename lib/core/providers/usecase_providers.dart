@@ -18,5 +18,6 @@ final wipeAllDataUseCaseProvider = Provider<WipeAllDataUseCase>((ref) {
   return WipeAllDataUseCase(
     ref.read(syncStateRepositoryProvider),
     ref.read(transactionRepositoryProvider),
+    ref.read(autoBookkeepingRepositoryProvider),
   );
 });

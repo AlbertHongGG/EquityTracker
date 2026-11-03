@@ -8,7 +8,7 @@ import 'package:equity_tracker/features/transaction/providers/transaction_notifi
 import 'package:equity_tracker/features/notion_sync/controllers/notion_config_controller.dart';
 import 'package:equity_tracker/features/notion_sync/services/notion_sync_service.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/data/auto_bookkeeping_repository.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/domain/models/parsed_notification.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/domain/models/raw_notification_data.dart';
 
 class NotificationAutoBookkeepingService {
   static const MethodChannel _channel = MethodChannel('com.jasonhong.equitytracker/notification_listener');

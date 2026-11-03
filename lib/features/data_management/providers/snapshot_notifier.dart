@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/core/services/native_backup_service.dart';
 import 'package:equity_tracker/core/providers/repository_providers.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
 
 final nativeBackupServiceProvider = Provider<NativeBackupService>((ref) {
   return NativeBackupService(
@@ -32,20 +31,16 @@ class SnapshotNotifier extends Notifier<Map<SnapshotSource, bool>> {
     state = newState;
   }
 
-  bool hasSnapshot(SnapshotSource source) {
-    return state[source] ?? false;
-  }
-
   Future<void> createSnapshot(SnapshotSource source) async {
     final backupService = ref.read(nativeBackupServiceProvider);
     await backupService.createSnapshot(source);
-    await _checkAllSnapshots();
+    state = {...state, source: true};
   }
 
   Future<BackupRestoreResult> restoreFromSnapshot(SnapshotSource source) async {
     final backupService = ref.read(nativeBackupServiceProvider);
     final result = await backupService.restoreFromSnapshot(source);
-    await _checkAllSnapshots();
+    state = {...state, source: false};
     return result;
   }
 }

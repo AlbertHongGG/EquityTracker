@@ -32,8 +32,15 @@ class MainActivity : FlutterActivity() {
         if (intent == null) return
         val txId = intent.getLongExtra(AutoBookkeepingNotifier.EXTRA_EDIT_TX_ID, -1L)
         if (txId != -1L) {
-            pendingEditTxId = txId
-            methodChannel?.invokeMethod("onEditTransactionRequested", mapOf("id" to txId))
+            intent.removeExtra(AutoBookkeepingNotifier.EXTRA_EDIT_TX_ID)
+            val channel = methodChannel
+            if (channel != null) {
+                // 熱啟動：Channel 已就緒，直接通知 Flutter
+                channel.invokeMethod("onEditTransactionRequested", mapOf("id" to txId))
+            } else {
+                // 冷啟動：暫存待 Flutter 引擎就緒後透過 getInitialEditTxId 取得
+                pendingEditTxId = txId
+            }
         }
     }
 
@@ -95,11 +102,6 @@ class MainActivity : FlutterActivity() {
             runOnUiThread {
                 methodChannel?.invokeMethod("onTransactionAdded", mapOf("id" to txId))
             }
-        }
-
-        // 如果冷啟動時帶有待編輯交易 ID，立即通知
-        pendingEditTxId?.let { txId ->
-            methodChannel?.invokeMethod("onEditTransactionRequested", mapOf("id" to txId))
         }
     }
 

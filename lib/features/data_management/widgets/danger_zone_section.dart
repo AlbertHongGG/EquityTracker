@@ -9,6 +9,7 @@ import 'package:equity_tracker/features/settings/widgets/common/settings_tile.da
 import 'package:equity_tracker/core/services/native_backup_service.dart';
 import 'package:equity_tracker/features/data_management/providers/snapshot_notifier.dart';
 import 'package:equity_tracker/features/notion_sync/controllers/notion_config_controller.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
 import 'package:equity_tracker/core/widgets/swipe_to_obliterate_button.dart';
 
 class DangerZoneSection extends ConsumerStatefulWidget {
@@ -37,6 +38,7 @@ class _DangerZoneSectionState extends ConsumerState<DangerZoneSection> {
       ref.refresh(transactionNotifierProvider);
       ref.invalidate(titleSuggestionProvider);
       ref.invalidate(notionConfigControllerProvider); // Force Notion UI state to reset
+      ref.invalidate(autoBookkeepingNotifierProvider);
 
       ref.read(inAppNotificationServiceProvider).showSuccess('All data & Notion sync cleared successfully.');
     } catch (e) {
@@ -61,6 +63,7 @@ class _DangerZoneSectionState extends ConsumerState<DangerZoneSection> {
       // ignore: unused_result
       ref.refresh(transactionNotifierProvider);
       ref.invalidate(titleSuggestionProvider);
+      ref.invalidate(autoBookkeepingNotifierProvider);
 
       ref.read(inAppNotificationServiceProvider).showSuccess('Data restored successfully!');
       

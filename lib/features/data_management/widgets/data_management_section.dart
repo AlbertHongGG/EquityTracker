@@ -10,6 +10,7 @@ import 'package:equity_tracker/features/settings/widgets/common/settings_section
 import 'package:equity_tracker/features/settings/widgets/common/settings_tile.dart';
 import 'package:equity_tracker/features/data_management/providers/snapshot_notifier.dart';
 import 'package:equity_tracker/features/notion_sync/controllers/notion_config_controller.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
 import 'package:go_router/go_router.dart';
 
 class DataManagementSection extends ConsumerStatefulWidget {
@@ -106,6 +107,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
         ref.refresh(transactionNotifierProvider);
         // ignore: unused_result
         ref.refresh(settingsNotifierProvider);
+        ref.invalidate(autoBookkeepingNotifierProvider);
 
         if (mounted) {
           Navigator.of(context).pop();
@@ -147,6 +149,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
       ref.refresh(transactionNotifierProvider);
       // ignore: unused_result
       ref.refresh(settingsNotifierProvider);
+      ref.invalidate(autoBookkeepingNotifierProvider);
 
       if (mounted) {
         Navigator.of(context).pop();

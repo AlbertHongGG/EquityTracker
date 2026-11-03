@@ -1,12 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:equity_tracker/core/providers/repository_providers.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/data/auto_bookkeeping_repository.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/domain/models/notification_rule.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/domain/models/parsed_notification.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/domain/models/raw_notification_data.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/services/notification_auto_bookkeeping_service.dart';
-
-final autoBookkeepingRepositoryProvider = Provider<AutoBookkeepingRepository>((ref) {
-  return AutoBookkeepingRepository();
-});
 
 final notificationAutoBookkeepingServiceProvider = Provider<NotificationAutoBookkeepingService>((ref) {
   final repo = ref.watch(autoBookkeepingRepositoryProvider);
