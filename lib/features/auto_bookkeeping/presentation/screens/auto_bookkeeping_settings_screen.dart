@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/core/widgets/immersive_scaffold.dart';
 import 'package:equity_tracker/core/widgets/premium_config_header.dart';
+import 'package:equity_tracker/core/widgets/app_switch.dart';
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
 import 'package:equity_tracker/core/enums/transaction_type.dart';
+import 'package:equity_tracker/features/settings/widgets/common/settings_section.dart';
+import 'package:equity_tracker/features/settings/widgets/common/settings_tile.dart';
 import 'package:equity_tracker/features/category/providers/category_notifier.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/domain/models/raw_notification_data.dart';
+import 'package:equity_tracker/features/category/data/category_model.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/domain/models/notification_rule.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/permission_status_card.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/auto_bookkeeping_config_card.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/notification_simulator_card.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/notification_rule_tile.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/add_custom_rule_dialog.dart';
-import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/custom_simulate_dialog.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/category_picker_sheet.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/rule_settings_tile.dart';
+import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/rule_edit_bottom_sheet.dart';
 
 class AutoBookkeepingSettingsScreen extends ConsumerStatefulWidget {
   const AutoBookkeepingSettingsScreen({super.key});
@@ -47,36 +48,49 @@ class _AutoBookkeepingSettingsScreenState
     }
   }
 
-  void _simulatePreset({
-    required String packageName,
-    required String title,
-    required String body,
-  }) async {
-    final raw = RawNotificationData(
-      packageName: packageName,
-      title: title,
-      body: body,
-      timestamp: DateTime.now(),
-    );
-    final success = await ref
-        .read(autoBookkeepingNotifierProvider.notifier)
-        .simulateNotification(raw);
-    if (success) {
-      ref
-          .read(inAppNotificationServiceProvider)
-          .showSuccess('原生管線成功解析並入帳：「$title - $body」');
-    } else {
-      ref
-          .read(inAppNotificationServiceProvider)
-          .showWarning('通知未命中任何啟用中規則，或為重複通知');
+  String _resolveDefaultCategoryName(
+    List<CategoryModel> categories,
+    String? defaultCategoryId,
+  ) {
+    if (categories.isEmpty) return '信用卡';
+
+    if (defaultCategoryId != null) {
+      final matched = categories.where((c) => c.id == defaultCategoryId);
+      if (matched.isNotEmpty) return matched.first.name;
     }
+
+    final creditCard = categories.where((c) => c.name == '信用卡');
+    if (creditCard.isNotEmpty) return creditCard.first.name;
+
+    final other = categories.where((c) => c.name == '其他');
+    if (other.isNotEmpty) return other.first.name;
+
+    return categories.first.name;
+  }
+
+  void _openRuleEditor(
+    BuildContext context,
+    List<CategoryModel> categories, [
+    NotificationRule? initialRule,
+  ]) {
+    RuleEditBottomSheet.show(
+      context: context,
+      initialRule: initialRule,
+      categories: categories,
+      onSave: (rule) {
+        ref.read(autoBookkeepingNotifierProvider.notifier).saveRule(rule);
+        ref.read(inAppNotificationServiceProvider).showSuccess(
+              initialRule != null ? '已更新「${rule.name}」規則' : '已新增「${rule.name}」規則',
+            );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final stateAsync = ref.watch(autoBookkeepingNotifierProvider);
     final categoriesAsync = ref.watch(categoryListProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
 
     return ImmersiveScaffold(
       body: stateAsync.when(
@@ -87,139 +101,135 @@ class _AutoBookkeepingSettingsScreenState
               .where((c) => c.type == TransactionType.expense && c.isEnabled)
               .toList();
 
+          final defaultCatName = _resolveDefaultCategoryName(
+            expenseCategories,
+            state.defaultCategoryId,
+          );
+
           return ListView(
-            padding: const EdgeInsets.only(bottom: 40),
+            padding: const EdgeInsets.only(bottom: 32),
             children: [
-              PremiumConfigHeader(
-                title: 'Auto Bookkeeping',
-                subtitle: 'NOTIFICATION PARSING & RULES',
-                trailing: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
+              // Header (無上一頁按鈕，依循 App 右滑返回規範)
+              const PremiumConfigHeader(
+                title: 'Auto\nBookkeeping',
+                subtitle: 'NOTIFICATION RECOGNITION',
               ),
-              // 1. 權限卡片
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: PermissionStatusCard(
-                  isGranted: state.isPermissionGranted,
-                  isDark: isDark,
-                  onOpenSettings: () {
-                    ref.read(autoBookkeepingNotifierProvider.notifier).openPermissionSettings();
-                  },
-                ),
-              ),
-              // 2. 主設定卡片
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: AutoBookkeepingConfigCard(
-                  isEnabled: state.isEnabled,
-                  notifyOnSuccess: state.notifyOnSuccess,
-                  defaultCategoryId: state.defaultCategoryId,
-                  categories: expenseCategories,
-                  isDark: isDark,
-                  onToggleEnabled: (val) {
-                    ref.read(autoBookkeepingNotifierProvider.notifier).toggleEnabled(val);
-                  },
-                  onToggleNotifyOnSuccess: (val) {
-                    ref.read(autoBookkeepingNotifierProvider.notifier).toggleNotifyOnSuccess(val);
-                  },
-                  onSelectDefaultCategory: (id) {
-                    ref.read(autoBookkeepingNotifierProvider.notifier).setDefaultCategoryId(id);
-                  },
-                ),
-              ),
-              // 3. 模擬測試區
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: NotificationSimulatorCard(
-                  isDark: isDark,
-                  onSimulatePreset: _simulatePreset,
-                  onOpenCustomDialog: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => CustomSimulateDialog(
-                        onSimulate: (title, body) {
-                          _simulatePreset(
-                            packageName: 'com.test.simulator',
-                            title: title,
-                            body: body,
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-              // 4. 支援機構與規則清單
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '支援機構與規則 (${state.rules.length})',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white70 : Colors.black87,
-                      ),
+
+              // Section 1: 一般設定 (精簡副標題，預設支出分類無贅言副標)
+              SettingsSection(
+                title: 'GENERAL',
+                children: [
+                  SettingsTile(
+                    icon: Icons.bolt_rounded,
+                    iconColor: Colors.amber.shade700,
+                    title: '自動記帳',
+                    subtitle: '偵測推播自動記帳',
+                    trailing: AppSwitch(
+                      value: state.isEnabled,
+                      onChanged: (val) async {
+                        if (val && !state.isPermissionGranted) {
+                          await ref
+                              .read(autoBookkeepingNotifierProvider.notifier)
+                              .openPermissionSettings();
+                          ref
+                              .read(inAppNotificationServiceProvider)
+                              .showWarning('請在系統設定中開啟通知存取權限以啟用自動記帳');
+                        } else {
+                          ref
+                              .read(autoBookkeepingNotifierProvider.notifier)
+                              .toggleEnabled(val);
+                        }
+                      },
                     ),
-                    Row(
+                  ),
+                  SettingsTile(
+                    icon: Icons.notifications_none_rounded,
+                    title: '記帳成功通知',
+                    subtitle: '入帳發送推播',
+                    trailing: AppSwitch(
+                      value: state.notifyOnSuccess,
+                      onChanged: (val) {
+                        ref
+                            .read(autoBookkeepingNotifierProvider.notifier)
+                            .toggleNotifyOnSuccess(val);
+                      },
+                    ),
+                  ),
+                  SettingsTile(
+                    icon: Icons.credit_card_rounded,
+                    iconColor: Colors.orange,
+                    title: '預設支出分類',
+                    subtitle: null, // 移除兩行冗贅副標，畫面極致清爽
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        TextButton.icon(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AddCustomRuleDialog(
-                                onRuleAdded: (rule) {
-                                  ref.read(autoBookkeepingNotifierProvider.notifier).saveRule(rule);
-                                  ref.read(inAppNotificationServiceProvider).showSuccess('已新增「${rule.name}」規則');
-                                },
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('自訂規則'),
+                        Text(
+                          defaultCatName,
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.primary,
+                            fontSize: 14,
+                          ),
                         ),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert_rounded, size: 20),
-                          onSelected: (val) {
-                            if (val == 'reset') {
-                              ref.read(autoBookkeepingNotifierProvider.notifier).resetRules();
-                              ref.read(inAppNotificationServiceProvider).showSuccess('已恢復預設規則清單');
-                            }
-                          },
-                          itemBuilder: (ctx) => [
-                            const PopupMenuItem(
-                              value: 'reset',
-                              child: Text('恢復預設規則'),
-                            ),
-                          ],
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.grey,
+                          size: 20,
                         ),
                       ],
                     ),
-                  ],
-                ),
+                    onTap: () {
+                      CategoryPickerSheet.show(
+                        context: context,
+                        categories: expenseCategories,
+                        selectedCategoryId: state.defaultCategoryId,
+                        title: '選擇預設支出分類',
+                        onCategorySelected: (catId) {
+                          ref
+                              .read(autoBookkeepingNotifierProvider.notifier)
+                              .setDefaultCategoryId(catId);
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: state.rules.map((rule) {
-                    return NotificationRuleTile(
-                      rule: rule,
-                      isDark: isDark,
-                      onToggle: (val) {
-                        ref.read(autoBookkeepingNotifierProvider.notifier).toggleRule(rule.id, val);
-                      },
-                      onDelete: rule.isSystemPreset
-                          ? null
-                          : () {
-                              ref.read(autoBookkeepingNotifierProvider.notifier).deleteRule(rule.id);
-                            },
-                    );
-                  }).toList(),
+
+              // Section 2: 支援機構與規則清單 (無三點按鈕，僅保留「+ 自訂規則」)
+              SettingsSection(
+                title: 'RULES & INSTITUTIONS',
+                trailing: GestureDetector(
+                  onTap: () => _openRuleEditor(context, expenseCategories),
+                  child: Text(
+                    '+ 自訂規則',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
                 ),
+                children: state.rules.map((rule) {
+                  return RuleSettingsTile(
+                    rule: rule,
+                    onTap: () => _openRuleEditor(context, expenseCategories, rule),
+                    onToggle: (val) {
+                      ref
+                          .read(autoBookkeepingNotifierProvider.notifier)
+                          .toggleRule(rule.id, val);
+                    },
+                    onDelete: rule.isSystemPreset
+                        ? null
+                        : () {
+                            ref
+                                .read(autoBookkeepingNotifierProvider.notifier)
+                                .deleteRule(rule.id);
+                          },
+                  );
+                }).toList(),
               ),
             ],
           );

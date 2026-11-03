@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 
 class SettingsSection extends StatelessWidget {
   final String? title;
+  final Widget? trailing;
   final List<Widget> children;
 
-  const SettingsSection({super.key, this.title, required this.children});
+  const SettingsSection({
+    super.key,
+    this.title,
+    this.trailing,
+    required this.children,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,16 +21,22 @@ class SettingsSection extends StatelessWidget {
       children: [
         if (title != null)
           Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 8, top: 24),
-            child: Text(
-              title!,
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white54 : Colors.grey.shade600,
-                letterSpacing: 1.2,
-              ),
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title!,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white54 : Colors.grey.shade600,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                ?trailing,
+              ],
             ),
           ),
         Container(
