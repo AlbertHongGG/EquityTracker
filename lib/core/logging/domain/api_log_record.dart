@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'package:intl/intl.dart';
 import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
+import 'package:equity_tracker/core/logging/domain/api_log_entry.dart';
 
 /// 敏感資訊遮罩工具 (Token & Key Sanitizer)
 class LogSanitizer {
@@ -175,5 +178,24 @@ class ApiLogRecord {
       'response': response.toMap(),
     };
     return LogSanitizer.cleanPhantomFields(raw);
+  }
+
+  /// 將記憶體中的強型別 Record 直接轉換為 UI Entry，零反序列化損耗
+  ApiLogEntry toEntry(File file) {
+    final fileName = file.path.split(Platform.pathSeparator).last;
+    final id = fileName.replaceAll('.json', '');
+    final dt = DateTime.tryParse(timestamp) ?? DateTime.now();
+    final displayTime = DateFormat('yyyy/MM/dd HH:mm:ss').format(dt);
+
+    return ApiLogEntry(
+      id: id,
+      file: file,
+      timestamp: dt,
+      category: category,
+      sourceName: sourceName,
+      durationMs: durationMs,
+      isError: isError,
+      displayTime: displayTime,
+    );
   }
 }

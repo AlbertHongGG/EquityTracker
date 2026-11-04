@@ -150,5 +150,45 @@ void main() {
       expect(entry.message, '交易紀錄已成功匯出至本機檔案');
       expect(entry.displayTime, '2026/11/04 12:00:00');
     });
+
+    test('toEntry directly creates exact NotificationLogEntry with matching type and message', () {
+      final file = File('20261104_113630_Notification_success_889900.json');
+      const record = NotificationLogRecord(
+        timestamp: '2026-11-04T11:36:30.000',
+        type: 'success',
+        title: null,
+        message: 'Transaction deleted',
+      );
+
+      final entry = record.toEntry(file);
+      expect(entry.id, '20261104_113630_Notification_success_889900');
+      expect(entry.type, NotificationType.success);
+      expect(entry.title, isNull);
+      expect(entry.message, 'Transaction deleted');
+      expect(entry.displayTime, '2026/11/04 11:36:30');
+    });
+  });
+
+  group('ApiLogRecord toEntry Tests', () {
+    test('toEntry directly creates exact ApiLogEntry without serialization loss', () {
+      final file = File('20261104_100000_notion_sync_NotionApiClient_123456.json');
+      final record = ApiLogRecord(
+        timestamp: '2026-11-04T10:00:00.000',
+        category: ApiLogCategory.notionSync,
+        sourceName: 'NotionApiClient',
+        durationMs: 350,
+        isError: false,
+        request: const ApiLogRequest(),
+        response: const ApiLogResponse(),
+      );
+
+      final entry = record.toEntry(file);
+      expect(entry.id, '20261104_100000_notion_sync_NotionApiClient_123456');
+      expect(entry.category, ApiLogCategory.notionSync);
+      expect(entry.sourceName, 'NotionApiClient');
+      expect(entry.durationMs, 350);
+      expect(entry.isError, false);
+      expect(entry.displayTime, '2026/11/04 10:00:00');
+    });
   });
 }

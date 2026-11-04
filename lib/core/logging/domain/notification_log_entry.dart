@@ -28,6 +28,32 @@ class NotificationLogRecord {
     raw.removeWhere((key, value) => value == null || (value is String && value.trim().isEmpty));
     return raw;
   }
+
+  /// 將記憶體中的強型別 Record 直接轉換為 UI Entry，零字串化與零反序列化損耗
+  NotificationLogEntry toEntry(File file) {
+    final fileName = file.path.split(Platform.pathSeparator).last;
+    final id = fileName.replaceAll('.json', '');
+
+    final dt = DateTime.tryParse(timestamp) ?? DateTime.now();
+    NotificationType parsedType = NotificationType.info;
+    final lowerType = type.toLowerCase().trim();
+    if (lowerType == 'success') parsedType = NotificationType.success;
+    if (lowerType == 'error') parsedType = NotificationType.error;
+    if (lowerType == 'warning') parsedType = NotificationType.warning;
+    if (lowerType == 'info') parsedType = NotificationType.info;
+
+    final displayTime = DateFormat('yyyy/MM/dd HH:mm:ss').format(dt);
+
+    return NotificationLogEntry(
+      id: id,
+      file: file,
+      timestamp: dt,
+      type: parsedType,
+      title: title,
+      message: message,
+      displayTime: displayTime,
+    );
+  }
 }
 
 /// 輕量級系統通知日誌列表模型 (NotificationLogEntry)

@@ -71,11 +71,7 @@ class NotificationLogManager extends AsyncNotifier<List<NotificationLogEntry>> {
       );
 
       if (file != null) {
-        final newEntry = NotificationLogEntry.fromFileWithHeader(
-          file,
-          record.toJson().toString(),
-        );
-
+        final newEntry = record.toEntry(file);
         final current = state.value ?? [];
         state = AsyncValue.data([newEntry, ...current]);
       }

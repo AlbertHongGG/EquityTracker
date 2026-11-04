@@ -64,11 +64,7 @@ class ApiLogManager extends AsyncNotifier<List<ApiLogEntry>> implements IApiLogg
       );
 
       if (file != null) {
-        final newEntry = ApiLogEntry.fromFileWithHeader(
-          file,
-          payload.toString(),
-        );
-
+        final newEntry = record.toEntry(file);
         final current = state.value ?? [];
         state = AsyncValue.data([newEntry, ...current]);
       }

@@ -4,6 +4,7 @@ import 'package:equity_tracker/core/notifications/domain/in_app_notification.dar
 import 'package:equity_tracker/core/notifications/controllers/notification_controller.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('NotificationController Unit Tests', () {
     test('initial state is null', () {
       final container = ProviderContainer();
