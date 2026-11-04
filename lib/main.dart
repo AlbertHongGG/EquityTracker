@@ -13,6 +13,7 @@ import 'package:equity_tracker/core/providers/package_info_provider.dart';
 import 'package:equity_tracker/features/updater/data/github_updater_config.dart';
 import 'package:equity_tracker/core/notifications/services/system_notification_service.dart';
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
+import 'package:equity_tracker/core/notifications/presentation/global_notification_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +58,7 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       routerConfig: goRouter,
+      builder: (context, child) => GlobalNotificationOverlay(child: child),
       debugShowCheckedModeBanner: false,
     );
   }

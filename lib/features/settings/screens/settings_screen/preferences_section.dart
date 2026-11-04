@@ -6,6 +6,7 @@ import 'package:equity_tracker/features/settings/widgets/common/settings_tile.da
 import 'package:equity_tracker/core/widgets/app_switch.dart';
 import 'package:equity_tracker/features/settings/widgets/premium_currency_picker.dart';
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
+import 'package:equity_tracker/core/logging/presentation/screens/system_notification_log_screen.dart';
 
 class PreferencesSection extends ConsumerWidget {
   const PreferencesSection({super.key});
@@ -69,6 +70,31 @@ class PreferencesSection extends ConsumerWidget {
               _showCurrencyDialog(context, ref, themeModeAsync.value!.currencySymbol);
             }
           },
+        ),
+        SettingsTile(
+          icon: Icons.notifications_active_rounded,
+          title: 'Notification Logs',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SystemNotificationLogScreen(),
+              ),
+            );
+          },
+          trailing: themeModeAsync.when(
+            data: (settings) => AppSwitch(
+              value: settings.isNotificationLogEnabled,
+              onChanged: (val) {
+                ref.read(settingsNotifierProvider.notifier).setNotificationLogEnabled(val);
+                ref.read(inAppNotificationServiceProvider).showInfo(
+                  val ? 'Notification Logging Enabled' : 'Notification Logging Disabled',
+                );
+              },
+            ),
+            loading: () => const SizedBox(height: 0),
+            error: (e, s) => const SizedBox(height: 0),
+          ),
         ),
       ],
     );

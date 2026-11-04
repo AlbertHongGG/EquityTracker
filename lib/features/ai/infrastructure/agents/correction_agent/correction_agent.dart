@@ -1,3 +1,5 @@
+import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
+import 'package:equity_tracker/core/logging/domain/i_api_logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/features/ai/domain/models/record_data.dart';
 import 'package:equity_tracker/features/ai/infrastructure/agents/base_agent.dart';
@@ -27,8 +29,10 @@ class CorrectionResult {
   CorrectionResult({required this.record});
 }
 
+
 class CorrectionAgent extends BaseAgent<CorrectionInput, CorrectionResult> {
-  CorrectionAgent(AIProvider provider) : super('Correction', provider);
+  CorrectionAgent(AIProvider provider, [IApiLogger? logManager])
+      : super('Correction', provider, logManager: logManager);
 
   @override
   Future<CorrectionResult> execute(CorrectionInput input, {void Function(String)? onChunk}) async {
@@ -65,5 +69,8 @@ class CorrectionAgent extends BaseAgent<CorrectionInput, CorrectionResult> {
 }
 
 final correctionAgentProvider = Provider.autoDispose<CorrectionAgent>((ref) {
-  return CorrectionAgent(ref.watch(aiProviderProvider));
+  return CorrectionAgent(
+    ref.watch(aiProviderProvider),
+    ref.watch(apiLogManagerProvider.notifier),
+  );
 });

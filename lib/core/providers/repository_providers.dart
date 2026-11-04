@@ -7,8 +7,10 @@ import 'package:equity_tracker/features/notion_sync/domain/sync_state_repository
 import 'package:equity_tracker/features/notion_sync/data/sync_state_repository_impl.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/data/auto_bookkeeping_repository.dart';
 
+import 'package:equity_tracker/core/logging/providers/logging_providers.dart';
+
 final notionApiClientProvider = Provider<NotionApiClient>((ref) {
-  return NotionApiClient();
+  return NotionApiClient(ref.watch(apiCallRecorderProvider));
 });
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {

@@ -4,11 +4,15 @@ import 'package:equity_tracker/core/widgets/premium_config_header.dart';
 import 'package:equity_tracker/core/widgets/immersive_scaffold.dart';
 
 import 'package:equity_tracker/features/settings/screens/settings_screen/preferences_section.dart';
+import 'package:equity_tracker/features/settings/providers/settings_notifier.dart';
 import 'package:equity_tracker/features/data_management/widgets/data_management_section.dart';
 import 'package:equity_tracker/features/data_management/widgets/integrations_section.dart';
 import 'package:equity_tracker/features/data_management/widgets/danger_zone_section.dart';
 import 'package:equity_tracker/features/updater/presentation/widgets/app_update_section.dart';
 import 'package:equity_tracker/features/ai/presentation/screens/ai_settings_screen.dart';
+import 'package:equity_tracker/core/logging/presentation/screens/api_log_viewer_screen.dart';
+import 'package:equity_tracker/core/widgets/app_switch.dart';
+import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
 import 'package:equity_tracker/features/settings/widgets/common/settings_section.dart';
 import 'package:equity_tracker/features/settings/widgets/common/settings_tile.dart';
 
@@ -41,6 +45,31 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                 },
+              ),
+              SettingsTile(
+                icon: Icons.terminal_rounded,
+                title: 'API & AI Logs',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ApiLogViewerScreen(),
+                    ),
+                  );
+                },
+                trailing: ref.watch(settingsNotifierProvider).when(
+                  data: (settings) => AppSwitch(
+                    value: settings.isApiLogEnabled,
+                    onChanged: (val) {
+                      ref.read(settingsNotifierProvider.notifier).setApiLogEnabled(val);
+                      ref.read(inAppNotificationServiceProvider).showInfo(
+                        val ? 'API & AI Logging Enabled' : 'API & AI Logging Disabled',
+                      );
+                    },
+                  ),
+                  loading: () => const SizedBox(height: 0),
+                  error: (e, s) => const SizedBox(height: 0),
+                ),
               ),
             ],
           ),

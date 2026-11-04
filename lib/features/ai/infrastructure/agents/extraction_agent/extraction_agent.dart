@@ -7,8 +7,12 @@ import 'package:equity_tracker/features/ai/infrastructure/agents/extraction_agen
 import 'package:equity_tracker/features/category/data/category_model.dart';
 import 'package:equity_tracker/core/enums/transaction_type.dart';
 
+import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
+import 'package:equity_tracker/core/logging/domain/i_api_logger.dart';
+
 class ExtractionAgent extends BaseAgent<String, List<RecordData>> {
-  ExtractionAgent(AIProvider provider) : super('Extraction', provider);
+  ExtractionAgent(AIProvider provider, [IApiLogger? logManager])
+      : super('Extraction', provider, logManager: logManager);
 
   @override
   Future<List<RecordData>> execute(
@@ -49,5 +53,8 @@ class ExtractionAgent extends BaseAgent<String, List<RecordData>> {
 }
 
 final extractionAgentProvider = Provider.autoDispose<ExtractionAgent>((ref) {
-  return ExtractionAgent(ref.watch(aiProviderProvider));
+  return ExtractionAgent(
+    ref.watch(aiProviderProvider),
+    ref.watch(apiLogManagerProvider.notifier),
+  );
 });

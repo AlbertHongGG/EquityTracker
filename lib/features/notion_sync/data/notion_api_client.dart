@@ -1,27 +1,39 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-
-import 'package:equity_tracker/core/enums/transaction_type.dart';
 import 'package:equity_tracker/features/transaction/data/transaction_model.dart';
 import 'package:equity_tracker/features/category/data/category_model.dart';
 import 'package:equity_tracker/features/notion_sync/domain/notion_models.dart';
+import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
+import 'package:equity_tracker/core/logging/data/api_call_recorder.dart';
 
 class NotionApiClient {
   static const String _kApiUrl = 'https://api.notion.com/v1/pages';
   static const String _kNotionVersion = '2022-06-28';
 
+  final ApiCallRecorder? callRecorder;
+
+  NotionApiClient([this.callRecorder]);
+
   Future<bool> testConnection(String token, String dbId) async {
     if (token.isEmpty || dbId.isEmpty) return false;
+    final url = Uri.parse('https://api.notion.com/v1/databases/$dbId');
+    final headers = {
+      'Authorization': 'Bearer $token',
+      'Notion-Version': _kNotionVersion,
+    };
+
     try {
-      final url = Uri.parse('https://api.notion.com/v1/databases/$dbId');
-      final response = await http.get(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Notion-Version': _kNotionVersion,
-        },
-      );
+      final response = callRecorder != null
+          ? await callRecorder!.recordHttpCall(
+              category: ApiLogCategory.notionSync,
+              sourceName: 'testConnection',
+              method: 'GET',
+              url: url,
+              headers: headers,
+              action: () => http.get(url, headers: headers),
+            )
+          : await http.get(url, headers: headers);
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -29,11 +41,12 @@ class NotionApiClient {
   }
 
   Future<List<TransactionModel>> fetchTransactions(
-    String token, 
-    String dbId, 
-    List<CategoryModel> categories, 
-    {DateTime? since, void Function(int fetchedCount)? onProgress}
-  ) async {
+    String token,
+    String dbId,
+    List<CategoryModel> categories, {
+    DateTime? since,
+    void Function(int fetchedCount)? onProgress,
+  }) async {
     if (token.isEmpty || dbId.isEmpty) return [];
 
     try {
@@ -57,15 +70,31 @@ class NotionApiClient {
           body["start_cursor"] = nextCursor;
         }
 
-        final response = await http.post(
-          url,
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-            'Notion-Version': _kNotionVersion,
-          },
-          body: jsonEncode(body),
-        );
+        final headers = {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Notion-Version': _kNotionVersion,
+        };
+
+        final response = callRecorder != null
+            ? await callRecorder!.recordHttpCall(
+                category: ApiLogCategory.notionSync,
+                sourceName: 'fetchTransactions',
+                method: 'POST',
+                url: url,
+                headers: headers,
+                body: body,
+                action: () => http.post(
+                  url,
+                  headers: headers,
+                  body: jsonEncode(body),
+                ),
+              )
+            : await http.post(
+                url,
+                headers: headers,
+                body: jsonEncode(body),
+              );
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -81,13 +110,13 @@ class NotionApiClient {
               allTransactions.add(transaction);
             } on FormatException catch (e) {
               debugPrint('NotionAPI: Skipped transaction ID ${page["id"]}. Reason: ${e.message}');
-              continue; // Skip invalid records but log them
+              continue;
             } catch (e) {
               debugPrint('NotionAPI: Unexpected error parsing transaction ${page["id"]}: $e');
               continue;
             }
           }
-          
+
           if (onProgress != null) {
             onProgress(allTransactions.length);
           }
@@ -130,15 +159,31 @@ class NotionApiClient {
         }
       };
 
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'Notion-Version': _kNotionVersion,
-        },
-        body: jsonEncode(body),
-      );
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Notion-Version': _kNotionVersion,
+      };
+
+      final response = callRecorder != null
+          ? await callRecorder!.recordHttpCall(
+              category: ApiLogCategory.notionSync,
+              sourceName: 'createTransaction',
+              method: 'POST',
+              url: url,
+              headers: headers,
+              body: body,
+              action: () => http.post(
+                url,
+                headers: headers,
+                body: jsonEncode(body),
+              ),
+            )
+          : await http.post(
+              url,
+              headers: headers,
+              body: jsonEncode(body),
+            );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -177,15 +222,31 @@ class NotionApiClient {
         }
       };
 
-      final response = await http.patch(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'Notion-Version': _kNotionVersion,
-        },
-        body: jsonEncode(body),
-      );
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Notion-Version': _kNotionVersion,
+      };
+
+      final response = callRecorder != null
+          ? await callRecorder!.recordHttpCall(
+              category: ApiLogCategory.notionSync,
+              sourceName: 'updateTransaction',
+              method: 'PATCH',
+              url: url,
+              headers: headers,
+              body: body,
+              action: () => http.patch(
+                url,
+                headers: headers,
+                body: jsonEncode(body),
+              ),
+            )
+          : await http.patch(
+              url,
+              headers: headers,
+              body: jsonEncode(body),
+            );
 
       return response.statusCode == 200;
     } catch (e) {
@@ -200,15 +261,31 @@ class NotionApiClient {
         "archived": true
       };
 
-      final response = await http.patch(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'Notion-Version': _kNotionVersion,
-        },
-        body: jsonEncode(body),
-      );
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Notion-Version': _kNotionVersion,
+      };
+
+      final response = callRecorder != null
+          ? await callRecorder!.recordHttpCall(
+              category: ApiLogCategory.notionSync,
+              sourceName: 'deleteTransaction',
+              method: 'PATCH',
+              url: url,
+              headers: headers,
+              body: body,
+              action: () => http.patch(
+                url,
+                headers: headers,
+                body: jsonEncode(body),
+              ),
+            )
+          : await http.patch(
+              url,
+              headers: headers,
+              body: jsonEncode(body),
+            );
 
       return response.statusCode == 200;
     } catch (e) {

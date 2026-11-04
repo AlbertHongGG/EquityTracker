@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
 import 'package:equity_tracker/core/theme/app_colors.dart';
 import 'package:equity_tracker/core/widgets/sheet/lens_wise_sheet_handle.dart';
 import 'package:equity_tracker/features/category/data/category_model.dart';
@@ -13,7 +15,7 @@ import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/ca
 /// 3. 輸入框：圓角 12dp，細緻邊框，Label 樣式與色彩 100% 絕對統一
 /// 4. 間距：水平 24dp、欄距 14dp、底部 32dp
 /// 5. Placeholder：精簡重點，無括號雜訊，無截斷
-class RuleEditBottomSheet extends StatefulWidget {
+class RuleEditBottomSheet extends ConsumerStatefulWidget {
   final NotificationRule? initialRule;
   final List<CategoryModel> categories;
   final ValueChanged<NotificationRule> onSave;
@@ -44,10 +46,10 @@ class RuleEditBottomSheet extends StatefulWidget {
   }
 
   @override
-  State<RuleEditBottomSheet> createState() => _RuleEditBottomSheetState();
+  ConsumerState<RuleEditBottomSheet> createState() => _RuleEditBottomSheetState();
 }
 
-class _RuleEditBottomSheetState extends State<RuleEditBottomSheet> {
+class _RuleEditBottomSheetState extends ConsumerState<RuleEditBottomSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _txTitleCtrl;
   late final TextEditingController _titleKwCtrl;
@@ -105,12 +107,7 @@ class _RuleEditBottomSheetState extends State<RuleEditBottomSheet> {
     final titleKw = _splitKeywords(_titleKwCtrl.text);
 
     if (name.isEmpty || txTitle.isEmpty || titleKw.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('請填寫機構名稱、入帳標題與至少一個標題關鍵字'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ref.read(inAppNotificationServiceProvider).showWarning('請填寫機構名稱、入帳標題與至少一個標題關鍵字');
       return;
     }
 

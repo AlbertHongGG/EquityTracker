@@ -1,6 +1,13 @@
-import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:flutter/material.dart';
 
+/// 結構化 JSON 階層檢視器 (JsonTreeViewer)
+///
+/// 1:1 復刻 LensWise_Android JsonTreeViewer 規範：
+/// - 自動過濾 null、空字串、空 Map 與空 List (isValidDisplayNode 守門)
+/// - 支援 SelectionArea 反白複製
+/// - 長文字或 JSON 巢狀字串自動漂亮縮排展示 (Code Block)
+/// - 語意型別色彩編碼 (Boolean: 紫色, Number: 綠色, String: 靛藍/薄荷綠, Key: 橘黃)
 class JsonTreeViewer extends StatelessWidget {
   final dynamic data;
   final bool isDark;
@@ -13,44 +20,71 @@ class JsonTreeViewer extends StatelessWidget {
     this.rootName,
   });
 
+  static bool isValidDisplayNode(dynamic node) {
+    if (node == null) return false;
+    if (node is String && node.trim().isEmpty) return false;
+    if (node is Map && node.isEmpty) return false;
+    if (node is List && node.isEmpty) return false;
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
+    return SelectionArea(
+      child: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     if (rootName != null) {
-      return _JsonNodeRenderer(keyName: rootName!, data: data, isDark: isDark, isRoot: true);
+      return _JsonNodeRenderer(
+        keyName: rootName!,
+        data: data,
+        isDark: isDark,
+        isRoot: true,
+      );
     }
 
     if (data is! Map && data is! List) {
-      return _JsonNodeRenderer(keyName: 'data', data: data, isDark: isDark, isRoot: true);
-    }
-    
-    // For root level Maps or Lists without a specific root name, 
-    // we just render their children directly
-    // so we don't have a useless 'root' expandable box taking up space.
-    if (data is Map) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: (data as Map).entries.map((e) => _JsonNodeRenderer(
-          keyName: e.key.toString(), 
-          data: e.value, 
-          isDark: isDark,
-          isRoot: true, // First level items start expanded if they are objects
-        )).toList(),
+      return _JsonNodeRenderer(
+        keyName: 'data',
+        data: data,
+        isDark: isDark,
+        isRoot: true,
       );
     }
-    
-    if (data is List) {
+
+    if (data is Map) {
+      final entries = (data as Map)
+          .entries
+          .where((e) => isValidDisplayNode(e.value))
+          .toList();
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: (data as List).asMap().entries.map((e) => _JsonNodeRenderer(
-          keyName: '[${e.key}]', 
-          data: e.value, 
+        children: entries.map((e) => _JsonNodeRenderer(
+          keyName: e.key.toString(),
+          data: e.value,
           isDark: isDark,
           isRoot: true,
         )).toList(),
       );
     }
 
-    return const SizedBox();
+    if (data is List) {
+      final list = (data as List).asMap().entries.where((e) => isValidDisplayNode(e.value)).toList();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: list.map((e) => _JsonNodeRenderer(
+          keyName: '[${e.key}]',
+          data: e.value,
+          isDark: isDark,
+          isRoot: true,
+        )).toList(),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }
 
@@ -72,7 +106,7 @@ class _JsonNodeRenderer extends StatefulWidget {
 }
 
 class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
-  bool _expanded = false;
+  late bool _expanded;
 
   @override
   void initState() {
@@ -89,9 +123,11 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
       return Container(
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: widget.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.02),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: widget.isDark ? Colors.white12 : Colors.black12),
+          color: widget.isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: widget.isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -102,14 +138,14 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
                   _expanded = !_expanded;
                 });
               },
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(
                   children: [
                     Icon(
-                      _expanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right, 
-                      size: 16,
+                      _expanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
+                      size: 18,
                       color: widget.isDark ? Colors.white70 : Colors.black87,
                     ),
                     const SizedBox(width: 8),
@@ -118,6 +154,7 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
                       style: TextStyle(
                         fontFamily: 'monospace',
                         fontWeight: FontWeight.bold,
+                        fontSize: 13,
                         color: widget.isDark ? Colors.blue[300] : Colors.blue[700],
                       ),
                     ),
@@ -136,19 +173,36 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
             ),
             if (_expanded)
               Padding(
-                padding: const EdgeInsets.only(left: 16, right: 8, bottom: 8),
+                padding: const EdgeInsets.only(left: 14, right: 8, bottom: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: isMap
-                      ? (widget.data as Map).entries.map((e) => _JsonNodeRenderer(keyName: e.key.toString(), data: e.value, isDark: widget.isDark)).toList()
-                      : (widget.data as List).asMap().entries.map((e) => _JsonNodeRenderer(keyName: '[${e.key}]', data: e.value, isDark: widget.isDark)).toList(),
+                      ? (widget.data as Map)
+                          .entries
+                          .where((e) => JsonTreeViewer.isValidDisplayNode(e.value))
+                          .map((e) => _JsonNodeRenderer(
+                                keyName: e.key.toString(),
+                                data: e.value,
+                                isDark: widget.isDark,
+                              ))
+                          .toList()
+                      : (widget.data as List)
+                          .asMap()
+                          .entries
+                          .where((e) => JsonTreeViewer.isValidDisplayNode(e.value))
+                          .map((e) => _JsonNodeRenderer(
+                                keyName: '[${e.key}]',
+                                data: e.value,
+                                isDark: widget.isDark,
+                              ))
+                          .toList(),
                 ),
               ),
           ],
         ),
       );
     } else {
-      // Primitive node
+      // 原始類型展示 (Primitive node)
       bool isLongString = false;
       if (widget.data is String) {
         final str = widget.data as String;
@@ -166,6 +220,7 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
                 style: TextStyle(
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w600,
+                  fontSize: 12,
                   color: widget.isDark ? Colors.orange[300] : Colors.orange[800],
                 ),
               ),
@@ -185,6 +240,7 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
                 style: TextStyle(
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w600,
+                  fontSize: 12,
                   color: widget.isDark ? Colors.orange[300] : Colors.orange[800],
                 ),
               ),
@@ -198,13 +254,22 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
 
   Widget _buildPrimitive(dynamic data) {
     if (data == null) {
-      return Text('null', style: TextStyle(fontFamily: 'monospace', color: widget.isDark ? Colors.grey[500] : Colors.grey[600]));
+      return Text(
+        'null',
+        style: TextStyle(fontFamily: 'monospace', color: widget.isDark ? Colors.grey[500] : Colors.grey[600]),
+      );
     }
     if (data is bool) {
-      return Text(data.toString(), style: TextStyle(fontFamily: 'monospace', color: widget.isDark ? Colors.purple[300] : Colors.purple[700]));
+      return Text(
+        data.toString(),
+        style: TextStyle(fontFamily: 'monospace', color: widget.isDark ? Colors.purple[300] : Colors.purple[700]),
+      );
     }
     if (data is num) {
-      return Text(data.toString(), style: TextStyle(fontFamily: 'monospace', color: widget.isDark ? Colors.green[300] : Colors.green[800]));
+      return Text(
+        data.toString(),
+        style: TextStyle(fontFamily: 'monospace', color: widget.isDark ? Colors.green[300] : Colors.green[800]),
+      );
     }
     if (data is String) {
       final str = data;
@@ -215,10 +280,10 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
           int endObj = str.lastIndexOf('}');
           int startArr = str.indexOf('[');
           int endArr = str.lastIndexOf(']');
-          
+
           int startIdx = -1;
           int endIdx = -1;
-          
+
           if (startObj >= 0 && endObj > startObj && (startArr == -1 || startObj < startArr)) {
             startIdx = startObj;
             endIdx = endObj;
@@ -241,7 +306,9 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
           decoration: BoxDecoration(
             color: widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: widget.isDark ? Colors.white24 : Colors.black12),
+            border: Border.all(
+              color: widget.isDark ? Colors.white24 : Colors.black12,
+            ),
           ),
           child: Text(
             displayStr,
@@ -254,7 +321,13 @@ class _JsonNodeRendererState extends State<_JsonNodeRenderer> {
           ),
         );
       } else {
-        return Text('"$str"', style: TextStyle(fontFamily: 'monospace', color: widget.isDark ? Colors.greenAccent[100] : Colors.indigo));
+        return Text(
+          '"$str"',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            color: widget.isDark ? Colors.greenAccent[100] : Colors.indigo,
+          ),
+        );
       }
     }
     return Text(data.toString(), style: const TextStyle(fontFamily: 'monospace'));

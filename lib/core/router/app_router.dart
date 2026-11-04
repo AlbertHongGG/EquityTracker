@@ -14,6 +14,8 @@ import 'package:equity_tracker/core/enums/transaction_type.dart';
 import 'package:equity_tracker/features/transaction/data/transaction_model.dart';
 import 'package:equity_tracker/features/category/data/category_model.dart';
 import 'package:equity_tracker/features/transaction/data/recurring_transaction_model.dart';
+import 'package:equity_tracker/core/logging/presentation/screens/system_notification_log_screen.dart';
+import 'package:equity_tracker/core/logging/presentation/screens/api_log_viewer_screen.dart';
 
 
 final goRouterProvider = Provider<GoRouter>((ref) {
@@ -74,6 +76,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             initialType: initialType,
           );
         },
+      ),
+      GoRoute(
+        path: '/logs/notifications',
+        builder: (context, state) => const SystemNotificationLogScreen(),
+      ),
+      GoRoute(
+        path: '/logs/api',
+        builder: (context, state) => const ApiLogViewerScreen(),
       ),
     ],
   );

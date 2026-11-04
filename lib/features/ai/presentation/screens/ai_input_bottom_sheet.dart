@@ -4,11 +4,12 @@ import 'package:equity_tracker/features/ai/presentation/controllers/ai_session_c
 import 'package:equity_tracker/features/ai/presentation/controllers/ai_config_controller.dart';
 import 'package:equity_tracker/features/ai/usecases/process_expense_usecase.dart';
 import 'package:equity_tracker/core/theme/app_colors.dart';
-import 'package:equity_tracker/features/ai/presentation/screens/ai_log_viewer_screen.dart';
+import 'package:equity_tracker/core/logging/presentation/screens/api_log_viewer_screen.dart';
 import 'package:equity_tracker/features/transaction/data/transaction_model.dart';
 import 'package:equity_tracker/features/ai/presentation/widgets/thinking_orb.dart';
 import 'package:equity_tracker/core/voice/controllers/voice_controller.dart';
 import 'package:go_router/go_router.dart';
+import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
 import 'dart:math' as math;
 
 void showAiInputBottomSheet(BuildContext context) {
@@ -116,9 +117,7 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
         }
       }
       if (next.hasError && !(previous?.hasError ?? false)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('無法啟動語音辨識，請確認麥克風權限或系統是否支援。')),
-        );
+        ref.read(inAppNotificationServiceProvider).showError('無法啟動語音辨識，請確認麥克風權限或系統是否支援。');
       }
     });
 
@@ -293,7 +292,7 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const AiLogViewerScreen()),
+                    MaterialPageRoute(builder: (context) => const ApiLogViewerScreen()),
                   );
                 },
               ),

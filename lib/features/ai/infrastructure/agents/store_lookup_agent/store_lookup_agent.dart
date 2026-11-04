@@ -1,3 +1,5 @@
+import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
+import 'package:equity_tracker/core/logging/domain/i_api_logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/features/ai/infrastructure/agents/base_agent.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/provider_factory.dart';
@@ -41,8 +43,10 @@ class StoreLookupResult {
   }
 }
 
+
 class StoreLookupAgent extends BaseAgent<StoreLookupInput, StoreLookupResult> {
-  StoreLookupAgent(AIProvider provider) : super('StoreLookup', provider);
+  StoreLookupAgent(AIProvider provider, [IApiLogger? logManager])
+      : super('StoreLookup', provider, logManager: logManager);
 
   @override
   Future<StoreLookupResult> execute(StoreLookupInput input, {void Function(String)? onChunk}) async {
@@ -63,5 +67,8 @@ class StoreLookupAgent extends BaseAgent<StoreLookupInput, StoreLookupResult> {
 }
 
 final storeLookupAgentProvider = Provider.autoDispose<StoreLookupAgent>((ref) {
-  return StoreLookupAgent(ref.watch(aiProviderProvider));
+  return StoreLookupAgent(
+    ref.watch(aiProviderProvider),
+    ref.watch(apiLogManagerProvider.notifier),
+  );
 });

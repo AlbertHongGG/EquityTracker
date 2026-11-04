@@ -6,14 +6,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/features/updater/data/github_updater_config.dart';
 import 'package:equity_tracker/features/updater/domain/release_info.dart';
 import 'package:equity_tracker/core/providers/package_info_provider.dart';
+import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
+import 'package:equity_tracker/core/logging/data/api_call_recorder.dart';
+import 'package:equity_tracker/core/logging/providers/logging_providers.dart';
 
 class GithubVersionService {
   final GithubUpdaterConfig config;
   final PackageInfo packageInfo;
+  final ApiCallRecorder? callRecorder;
 
   GithubVersionService({
     required this.config,
     required this.packageInfo,
+    this.callRecorder,
   });
 
   /// Checks GitHub for the latest release and compares it with the current app version.
@@ -22,10 +27,19 @@ class GithubVersionService {
     try {
       final url = 'https://api.github.com/repos/${config.githubOwner}/${config.githubRepo}/releases/latest';
 
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {'Accept': 'application/vnd.github.v3+json'},
-      ).timeout(const Duration(seconds: 5));
+      final uri = Uri.parse(url);
+      final headers = {'Accept': 'application/vnd.github.v3+json'};
+
+      final response = callRecorder != null
+          ? await callRecorder!.recordHttpCall(
+              category: ApiLogCategory.githubUpdater,
+              sourceName: 'checkForUpdate',
+              method: 'GET',
+              url: uri,
+              headers: headers,
+              action: () => http.get(uri, headers: headers).timeout(const Duration(seconds: 5)),
+            )
+          : await http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -90,5 +104,6 @@ final githubVersionServiceProvider = Provider<GithubVersionService>((ref) {
   return GithubVersionService(
     config: ref.watch(githubUpdaterConfigProvider),
     packageInfo: ref.watch(packageInfoProvider),
+    callRecorder: ref.watch(apiCallRecorderProvider),
   );
 });

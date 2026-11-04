@@ -1,6 +1,7 @@
 import 'package:equity_tracker/features/notion_sync/domain/sync_state_repository.dart';
 import 'package:equity_tracker/features/transaction/data/transaction_repository.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/data/auto_bookkeeping_repository.dart';
+import 'package:equity_tracker/core/logging/data/log_file_storage.dart';
 
 class WipeAllDataUseCase {
   final ISyncStateRepository _syncStateRepository;
@@ -24,5 +25,8 @@ class WipeAllDataUseCase {
 
     // 3. Reset auto bookkeeping rules to default
     await _autoBookkeepingRepository?.resetToDefaultRules();
+
+    // 4. Wipe runtime logs
+    await LogFileStorage().clearAllLogs();
   }
 }
