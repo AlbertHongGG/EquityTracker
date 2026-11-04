@@ -22,6 +22,7 @@ class AIConfigState {
          AIProviderType.geminiflow: const GeminiFlowConfig(),
          AIProviderType.ollama: const OllamaConfig(),
          AIProviderType.vertexai: const VertexAIConfig(),
+         AIProviderType.googleaistudio: const GoogleAiStudioConfig(),
        };
 
   ProviderConfig get activeConfig => configs[providerType]!;
@@ -49,12 +50,18 @@ class AIConfigController extends Notifier<AIConfigState> {
     final prefs = ref.watch(sharedPreferencesProvider);
     
     final typeStr = prefs.getString('ai_provider_type');
-    final type = typeStr != null ? AIProviderType.values.byName(typeStr) : AIProviderType.geminiflow;
+    final type = typeStr != null
+        ? AIProviderType.values.firstWhere(
+            (e) => e.name == typeStr,
+            orElse: () => AIProviderType.geminiflow,
+          )
+        : AIProviderType.geminiflow;
     
     final Map<AIProviderType, ProviderConfig> loadedConfigs = {
       AIProviderType.geminiflow: const GeminiFlowConfig(),
       AIProviderType.ollama: const OllamaConfig(),
       AIProviderType.vertexai: const VertexAIConfig(),
+      AIProviderType.googleaistudio: const GoogleAiStudioConfig(),
     };
 
     final geminiflowJson = prefs.getString('ai_config_geminiflow');
@@ -65,6 +72,9 @@ class AIConfigController extends Notifier<AIConfigState> {
 
     final vertexaiJson = prefs.getString('ai_config_vertexai');
     if (vertexaiJson != null) loadedConfigs[AIProviderType.vertexai] = VertexAIConfig.fromJson(jsonDecode(vertexaiJson));
+
+    final googleAiStudioJson = prefs.getString('ai_config_googleaistudio');
+    if (googleAiStudioJson != null) loadedConfigs[AIProviderType.googleaistudio] = GoogleAiStudioConfig.fromJson(jsonDecode(googleAiStudioJson));
 
     final googleMapApiKey = prefs.getString('google_map_api_key') ?? '';
     final isAIAgentEnabled = prefs.getBool('is_ai_agent_enabled') ?? false;
@@ -106,6 +116,7 @@ class AIConfigController extends Notifier<AIConfigState> {
     await prefs.setString('ai_config_geminiflow', jsonEncode(state.configs[AIProviderType.geminiflow]!.toJson()));
     await prefs.setString('ai_config_ollama', jsonEncode(state.configs[AIProviderType.ollama]!.toJson()));
     await prefs.setString('ai_config_vertexai', jsonEncode(state.configs[AIProviderType.vertexai]!.toJson()));
+    await prefs.setString('ai_config_googleaistudio', jsonEncode(state.configs[AIProviderType.googleaistudio]!.toJson()));
     
     if (googleMapApiKey != null) {
       await prefs.setString('google_map_api_key', googleMapApiKey.trim());

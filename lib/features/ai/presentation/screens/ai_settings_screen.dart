@@ -24,6 +24,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
   late TextEditingController _projectIdController;
   late TextEditingController _regionController;
   late TextEditingController _accessTokenController;
+  late TextEditingController _apiKeyController;
   late TextEditingController _googleMapApiController;
   
   AIProviderType? _lastProviderType;
@@ -37,6 +38,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
     _projectIdController = TextEditingController();
     _regionController = TextEditingController();
     _accessTokenController = TextEditingController();
+    _apiKeyController = TextEditingController();
     _googleMapApiController = TextEditingController();
   }
 
@@ -47,6 +49,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
     _projectIdController.dispose();
     _regionController.dispose();
     _accessTokenController.dispose();
+    _apiKeyController.dispose();
     _googleMapApiController.dispose();
     _debounceTimer?.cancel();
     super.dispose();
@@ -66,7 +69,9 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
       _googleMapApiController.text = state.googleMapApiKey;
     }
 
-    if (config is GeminiFlowConfig) {
+    if (config is GoogleAiStudioConfig) {
+      if (_apiKeyController.text != config.apiKey) _apiKeyController.text = config.apiKey;
+    } else if (config is GeminiFlowConfig) {
       if (_baseUrlController.text != config.baseUrl) _baseUrlController.text = config.baseUrl;
     } else if (config is OllamaConfig) {
       if (_baseUrlController.text != config.baseUrl) _baseUrlController.text = config.baseUrl;
@@ -84,7 +89,12 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
       final config = state.activeConfig;
       
       ProviderConfig newConfig = config;
-      if (config is GeminiFlowConfig) {
+      if (config is GoogleAiStudioConfig) {
+        newConfig = config.copyWith(
+          modelName: _modelNameController.text,
+          apiKey: _apiKeyController.text,
+        );
+      } else if (config is GeminiFlowConfig) {
         newConfig = config.copyWith(
           modelName: _modelNameController.text,
           baseUrl: _baseUrlController.text,
@@ -119,12 +129,30 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
   }
 
   IconData _getProviderIcon(AIProviderType type) {
-    if (type == AIProviderType.geminiflow) return Icons.auto_awesome;
-    if (type == AIProviderType.ollama) return Icons.memory_rounded;
-    return Icons.cloud_done_rounded;
+    switch (type) {
+      case AIProviderType.googleaistudio:
+        return Icons.psychology_rounded;
+      case AIProviderType.geminiflow:
+        return Icons.auto_awesome;
+      case AIProviderType.ollama:
+        return Icons.memory_rounded;
+      case AIProviderType.vertexai:
+        return Icons.cloud_done_rounded;
+    }
   }
 
-
+  String _getProviderDisplayName(AIProviderType type) {
+    switch (type) {
+      case AIProviderType.googleaistudio:
+        return 'GOOGLE AI STUDIO';
+      case AIProviderType.geminiflow:
+        return 'GEMINIFLOW';
+      case AIProviderType.ollama:
+        return 'OLLAMA';
+      case AIProviderType.vertexai:
+        return 'VERTEXAI';
+    }
+  }
 
   Widget _buildSectionHeader(String title, bool isDark) {
     return Padding(
@@ -198,7 +226,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
                         color: isSelected ? Theme.of(context).primaryColor : (isDark ? Colors.white54 : Colors.black54),
                       ),
                       title: Text(
-                        type.name.toUpperCase(),
+                        _getProviderDisplayName(type),
                         style: TextStyle(
                           fontFamily: 'Outfit',
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -211,6 +239,103 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
                       onTap: () {
                         _lastProviderType = null;
                         ref.read(aiConfigControllerProvider.notifier).saveConfig(providerType: type);
+                        Navigator.pop(context);
+                      },
+                    );
+                  }),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    );
+  }
+
+  void _showThinkingLevelBottomSheet(AIConfigState state, bool isDark) {
+    final titleColor = isDark
+        ? Colors.white.withOpacity(0.54)
+        : Colors.black.withOpacity(0.54);
+
+    final studioConfig = state.activeConfig as GoogleAiStudioConfig;
+    final currentLevel = GeminiThinkingLevel.fromValue(studioConfig.thinkingLevel);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 1. LensWise 頂部把手 (32dp 置中)
+                  LensWiseSheetHandle(isDark: isDark),
+
+                  // 2. LensWise Header 導航列 (1:1 左右對稱 + 13sp 字距 2.0 粗體置中標題)
+                  Row(
+                    children: [
+                      const SizedBox(width: 48), // 左側 Spacer 平衡
+                      Expanded(
+                        child: Text(
+                          'THINKING LEVEL',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2.0,
+                            color: titleColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 48), // 右側 Spacer 平衡
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ...GeminiThinkingLevel.values.map((level) {
+                    final isSelected = currentLevel == level;
+                    return ListTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      tileColor: isSelected ? Theme.of(context).primaryColor.withValues(alpha: 0.1) : null,
+                      leading: Icon(
+                        Icons.tune_rounded,
+                        color: isSelected ? Theme.of(context).primaryColor : (isDark ? Colors.white54 : Colors.black54),
+                      ),
+                      title: Text(
+                        level.label,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 16,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                          color: isSelected ? Theme.of(context).primaryColor : (isDark ? Colors.white : Colors.black),
+                        ),
+                      ),
+                      subtitle: Text(
+                        level.description,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 13,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                      ),
+                      trailing: isSelected 
+                        ? Icon(Icons.check_circle_rounded, color: Theme.of(context).primaryColor)
+                        : null,
+                      onTap: () {
+                        final updated = studioConfig.copyWith(thinkingLevel: level.value);
+                        ref.read(aiConfigControllerProvider.notifier).saveConfig(
+                          activeProviderConfig: updated,
+                        );
                         Navigator.pop(context);
                       },
                     );
@@ -248,7 +373,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
               ),
               Expanded(
                 child: Text(
-                  type.name.toUpperCase(),
+                  _getProviderDisplayName(type),
                   style: TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 16,
@@ -311,6 +436,54 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
     );
   }
 
+  Widget _buildThinkingLevelTile(AIConfigState state, bool isDark, {bool isEnabled = true}) {
+    final studioConfig = state.activeConfig as GoogleAiStudioConfig;
+    final currentLevel = GeminiThinkingLevel.fromValue(studioConfig.thinkingLevel);
+
+    return GestureDetector(
+      onTap: isEnabled ? () => _showThinkingLevelBottomSheet(state, isDark) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        color: Colors.transparent,
+        child: Opacity(
+          opacity: isEnabled ? 1.0 : 0.4,
+          child: Row(
+            children: [
+              Container(
+                constraints: const BoxConstraints(minWidth: 50),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Icon(
+                  Icons.tune_rounded,
+                  color: Theme.of(context).primaryColor,
+                  size: 22,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  currentLevel.label,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDivider(bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(left: 60),
@@ -329,7 +502,12 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
     fields.add(_buildDivider(isDark));
     fields.add(_buildSettingsTile('Model Name', Icons.smart_toy_rounded, _modelNameController, isDark, isEnabled: isEnabled));
     
-    if (state.activeConfig is VertexAIConfig) {
+    if (state.activeConfig is GoogleAiStudioConfig) {
+      fields.add(_buildDivider(isDark));
+      fields.add(_buildSettingsTile('API Key', Icons.key_rounded, _apiKeyController, isDark, obscureText: true, isEnabled: isEnabled));
+      fields.add(_buildDivider(isDark));
+      fields.add(_buildThinkingLevelTile(state, isDark, isEnabled: isEnabled));
+    } else if (state.activeConfig is VertexAIConfig) {
       fields.add(_buildDivider(isDark));
       fields.add(_buildSettingsTile('Project ID', Icons.business_rounded, _projectIdController, isDark, isEnabled: isEnabled));
       fields.add(_buildDivider(isDark));
@@ -372,48 +550,53 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
   }
 
   Widget _buildGlobalSettingsGroup(AIConfigState state, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Global Integrations', isDark),
-        PremiumConfigCard(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Google Map API',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    AppSwitch(
-                      value: state.isGoogleMapEnabled,
-                      onChanged: _onGoogleMapToggle,
-                      activeColor: Theme.of(context).primaryColor,
-                    ),
-                  ],
+    final isEnabled = state.isAIAgentEnabled;
+    return PremiumConfigCard(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Google Map Place API',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
-              ),
-              _buildDivider(isDark),
-              _buildSettingsTile(
-                'Google Map API Key (Optional)',
-                Icons.map_rounded,
-                _googleMapApiController,
-                isDark,
-                obscureText: true,
-                isEnabled: state.isGoogleMapEnabled,
-              ),
-            ],
+                AppSwitch(
+                  value: state.isGoogleMapEnabled,
+                  onChanged: isEnabled ? _onGoogleMapToggle : null,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Column(
+              children: [
+                _buildDivider(isDark),
+                _buildSettingsTile(
+                  'Google Map API Key',
+                  Icons.map_rounded,
+                  _googleMapApiController,
+                  isDark,
+                  obscureText: true,
+                  isEnabled: isEnabled,
+                ),
+              ],
+            ),
+            crossFadeState: (state.isGoogleMapEnabled && isEnabled)
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 300),
+          ),
+        ],
+      ),
     );
   }
 
@@ -426,60 +609,62 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
     _syncControllers(state);
 
     return ImmersiveScaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            PremiumConfigHeader(
-              title: 'AI Engine\nConfiguration',
-              subtitle: 'SMART CATEGORIZATION & INSIGHTS',
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildGlobalSettingsGroup(state, isDark),
-                  const SizedBox(height: 24),
-                  
-                  _buildSectionHeader('AI Engine', isDark),
-                  PremiumConfigCard(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'AI Agent',
-                          style: TextStyle(
-                            fontFamily: 'Outfit',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                PremiumConfigHeader(
+                  title: 'AI Engine\nConfiguration',
+                  subtitle: 'SMART CATEGORIZATION & INSIGHTS',
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildGlobalSettingsGroup(state, isDark),
+                      const SizedBox(height: 24),
+                      
+                      _buildSectionHeader('AI Engine', isDark),
+                      PremiumConfigCard(
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'AI Agent',
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  AppSwitch(
+                                    value: state.isAIAgentEnabled,
+                                    onChanged: _onAIAgentToggle,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _buildDivider(isDark),
+                            _buildSmartSelectorCard(state, isDark),
+                            _buildAnimatedParametersGroup(state, isDark),
+                          ],
                         ),
-                        AppSwitch(
-                          value: state.isAIAgentEnabled,
-                          onChanged: _onAIAgentToggle,
-                          activeColor: Theme.of(context).primaryColor,
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
                   ),
-                  _buildDivider(isDark),
-                  _buildSmartSelectorCard(state, isDark),
-                  _buildAnimatedParametersGroup(state, isDark),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 60),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

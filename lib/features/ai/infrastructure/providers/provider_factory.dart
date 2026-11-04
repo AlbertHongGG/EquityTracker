@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/ai_provider.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/geminiflow/geminiflow_provider.dart';
+import 'package:equity_tracker/features/ai/infrastructure/providers/googleaistudio/googleaistudio_provider.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/ollama/ollama_provider.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/vertexai/vertexai_provider.dart';
 import 'package:equity_tracker/features/ai/presentation/controllers/ai_config_controller.dart';
@@ -40,6 +41,16 @@ class ProviderFactory {
           region: vertexConfig.region,
           accessToken: vertexConfig.accessToken,
           modelName: vertexConfig.modelName,
+        );
+      case AIProviderType.googleaistudio:
+        final studioConfig = config as GoogleAiStudioConfig;
+        if (studioConfig.apiKey.isEmpty) {
+          throw Exception('Google AI Studio API Key is empty. Please set it in Settings.');
+        }
+        return GoogleAiStudioProvider(
+          apiKey: studioConfig.apiKey,
+          modelName: studioConfig.modelName,
+          thinkingLevel: studioConfig.thinkingLevel,
         );
     }
   }
