@@ -88,8 +88,8 @@ class LogFileStorage {
       }
 
       final stream = file.openRead(0, maxBytes);
-      final chunk = await stream.first;
-      return utf8.decode(chunk, allowMalformed: true);
+      final bytes = await stream.expand((chunk) => chunk).toList();
+      return utf8.decode(bytes, allowMalformed: true);
     } catch (_) {
       return '';
     }

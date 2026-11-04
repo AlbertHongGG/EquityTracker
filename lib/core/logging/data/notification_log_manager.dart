@@ -39,6 +39,13 @@ class NotificationLogManager extends AsyncNotifier<List<NotificationLogEntry>> {
     }
   }
 
+  Future<List<NotificationLogEntry>> _ensureLoaded() async {
+    if (state.hasValue) {
+      return state.value!;
+    }
+    return await future;
+  }
+
   /// 記錄一則通知至磁碟 (內建開關守門)
   Future<void> logNotification({
     required NotificationType type,
@@ -72,8 +79,9 @@ class NotificationLogManager extends AsyncNotifier<List<NotificationLogEntry>> {
 
       if (file != null) {
         final newEntry = record.toEntry(file);
-        final current = state.value ?? [];
-        state = AsyncValue.data([newEntry, ...current]);
+        final current = await _ensureLoaded();
+        final filtered = current.where((e) => e.id != newEntry.id).toList();
+        state = AsyncValue.data([newEntry, ...filtered]);
       }
     } catch (e) {
       print('[NotificationLogManager] Failed to log notification: $e');
@@ -89,7 +97,7 @@ class NotificationLogManager extends AsyncNotifier<List<NotificationLogEntry>> {
   /// 刪除單筆通知日誌
   Future<void> deleteLog(NotificationLogEntry entry) async {
     await _storage.deleteLog(entry.file);
-    final current = state.value ?? [];
+    final current = await _ensureLoaded();
     state = AsyncValue.data(current.where((item) => item.id != entry.id).toList());
   }
 

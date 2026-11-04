@@ -190,5 +190,22 @@ void main() {
       expect(entry.isError, false);
       expect(entry.displayTime, '2026/11/04 10:00:00');
     });
+
+    test('resolvePayload returns safe error map when file does not exist', () async {
+      final file = File('non_existent_log_123.json');
+      final entry = ApiLogEntry(
+        id: 'non_existent_log_123',
+        file: file,
+        timestamp: DateTime.now(),
+        category: ApiLogCategory.notionSync,
+        sourceName: 'test',
+        durationMs: 100,
+        isError: false,
+        displayTime: '2026/11/04 12:00:00',
+      );
+
+      final payload = await entry.resolvePayload();
+      expect(payload.containsKey('error'), isTrue);
+    });
   });
 }

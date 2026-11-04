@@ -7,6 +7,7 @@ import 'package:equity_tracker/core/widgets/scale_button.dart';
 import 'package:equity_tracker/features/settings/widgets/common/settings_section.dart';
 import 'package:equity_tracker/features/settings/widgets/common/settings_tile.dart';
 import 'package:equity_tracker/core/services/native_backup_service.dart';
+import 'package:equity_tracker/core/logging/providers/logging_providers.dart';
 import 'package:equity_tracker/features/data_management/providers/snapshot_notifier.dart';
 import 'package:equity_tracker/features/notion_sync/controllers/notion_config_controller.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
@@ -32,6 +33,10 @@ class _DangerZoneSectionState extends ConsumerState<DangerZoneSection> {
       
       // 2. Delegate to the Wipe All Data Use Case for atomic wipe
       await ref.read(wipeAllDataUseCaseProvider).execute();
+
+      // 同步清空日誌管理器記憶體狀態，防止 Split-Brain
+      await ref.read(apiLogManagerProvider.notifier).clearAllLogs();
+      await ref.read(notificationLogManagerProvider.notifier).clearAllLogs();
 
       // 3. Refresh state
       // ignore: unused_result

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/core/providers/repository_providers.dart';
+import 'package:equity_tracker/core/logging/providers/logging_providers.dart';
 import 'package:equity_tracker/features/notion_sync/domain/use_cases/connect_notion_use_case.dart';
 import 'package:equity_tracker/features/notion_sync/domain/use_cases/wipe_all_data_use_case.dart';
 import 'package:equity_tracker/features/notion_sync/controllers/notion_config_controller.dart'; 
@@ -19,5 +20,6 @@ final wipeAllDataUseCaseProvider = Provider<WipeAllDataUseCase>((ref) {
     ref.read(syncStateRepositoryProvider),
     ref.read(transactionRepositoryProvider),
     ref.read(autoBookkeepingRepositoryProvider),
+    ref.read(logFileStorageProvider),
   );
 });

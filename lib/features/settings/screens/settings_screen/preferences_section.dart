@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/features/settings/providers/settings_notifier.dart';
 import 'package:equity_tracker/features/settings/widgets/common/settings_section.dart';
@@ -6,7 +7,6 @@ import 'package:equity_tracker/features/settings/widgets/common/settings_tile.da
 import 'package:equity_tracker/core/widgets/app_switch.dart';
 import 'package:equity_tracker/features/settings/widgets/premium_currency_picker.dart';
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
-import 'package:equity_tracker/core/logging/presentation/screens/system_notification_log_screen.dart';
 
 class PreferencesSection extends ConsumerWidget {
   const PreferencesSection({super.key});
@@ -75,12 +75,7 @@ class PreferencesSection extends ConsumerWidget {
           icon: Icons.notifications_active_rounded,
           title: 'Notification Logs',
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SystemNotificationLogScreen(),
-              ),
-            );
+            context.push('/logs/notifications');
           },
           trailing: themeModeAsync.when(
             data: (settings) => AppSwitch(

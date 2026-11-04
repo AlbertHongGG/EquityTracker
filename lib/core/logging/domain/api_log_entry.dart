@@ -41,12 +41,19 @@ class ApiLogEntry implements DeletableLog {
 
   /// 延遲讀取完整 JSON 內容
   Future<Map<String, dynamic>> resolvePayload() async {
-    final content = await file.readAsString();
-    final decoded = jsonDecode(content);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
+    try {
+      if (!await file.exists()) {
+        return {'error': '日誌檔案已被清理或不存在 (${file.path})'};
+      }
+      final content = await file.readAsString();
+      final decoded = jsonDecode(content);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      return {'raw': decoded};
+    } catch (e) {
+      return {'error': '無法解析日誌檔案內容: $e'};
     }
-    return {'raw': decoded};
   }
 
   /// 從檔名與前 2KB 標頭預覽解析 ApiLogEntry

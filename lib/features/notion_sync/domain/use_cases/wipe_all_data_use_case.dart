@@ -7,12 +7,14 @@ class WipeAllDataUseCase {
   final ISyncStateRepository _syncStateRepository;
   final TransactionRepository _transactionRepository;
   final AutoBookkeepingRepository? _autoBookkeepingRepository;
+  final LogFileStorage _logFileStorage;
 
   WipeAllDataUseCase(
     this._syncStateRepository,
     this._transactionRepository, [
     this._autoBookkeepingRepository,
-  ]);
+    LogFileStorage? logFileStorage,
+  ]) : _logFileStorage = logFileStorage ?? LogFileStorage();
 
   /// Wipes all local transactions and unlinks Notion sync state atomically.
   Future<void> execute() async {
@@ -27,6 +29,6 @@ class WipeAllDataUseCase {
     await _autoBookkeepingRepository?.resetToDefaultRules();
 
     // 4. Wipe runtime logs
-    await LogFileStorage().clearAllLogs();
+    await _logFileStorage.clearAllLogs();
   }
 }

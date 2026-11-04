@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/core/widgets/premium_config_header.dart';
 import 'package:equity_tracker/core/widgets/immersive_scaffold.dart';
@@ -10,7 +11,6 @@ import 'package:equity_tracker/features/data_management/widgets/integrations_sec
 import 'package:equity_tracker/features/data_management/widgets/danger_zone_section.dart';
 import 'package:equity_tracker/features/updater/presentation/widgets/app_update_section.dart';
 import 'package:equity_tracker/features/ai/presentation/screens/ai_settings_screen.dart';
-import 'package:equity_tracker/core/logging/presentation/screens/api_log_viewer_screen.dart';
 import 'package:equity_tracker/core/widgets/app_switch.dart';
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
 import 'package:equity_tracker/features/settings/widgets/common/settings_section.dart';
@@ -50,12 +50,7 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.terminal_rounded,
                 title: 'API & AI Logs',
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ApiLogViewerScreen(),
-                    ),
-                  );
+                  context.push('/logs/api');
                 },
                 trailing: ref.watch(settingsNotifierProvider).when(
                   data: (settings) => AppSwitch(

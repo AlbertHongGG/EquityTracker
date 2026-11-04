@@ -42,6 +42,13 @@ class ApiLogManager extends AsyncNotifier<List<ApiLogEntry>> implements IApiLogg
     }
   }
 
+  Future<List<ApiLogEntry>> _ensureLoaded() async {
+    if (state.hasValue) {
+      return state.value!;
+    }
+    return await future;
+  }
+
   /// 記錄一次 API 或 AI 交互 (內建開關守門)
   Future<void> logInteraction(ApiLogRecord record) async {
     try {
@@ -65,8 +72,9 @@ class ApiLogManager extends AsyncNotifier<List<ApiLogEntry>> implements IApiLogg
 
       if (file != null) {
         final newEntry = record.toEntry(file);
-        final current = state.value ?? [];
-        state = AsyncValue.data([newEntry, ...current]);
+        final current = await _ensureLoaded();
+        final filtered = current.where((e) => e.id != newEntry.id).toList();
+        state = AsyncValue.data([newEntry, ...filtered]);
       }
     } catch (e) {
       print('[ApiLogManager] Failed to log interaction: $e');
@@ -82,7 +90,7 @@ class ApiLogManager extends AsyncNotifier<List<ApiLogEntry>> implements IApiLogg
   /// 刪除單筆 API 日誌
   Future<void> deleteLog(ApiLogEntry entry) async {
     await _storage.deleteLog(entry.file);
-    final current = state.value ?? [];
+    final current = await _ensureLoaded();
     state = AsyncValue.data(current.where((item) => item.id != entry.id).toList());
   }
 
@@ -93,7 +101,7 @@ class ApiLogManager extends AsyncNotifier<List<ApiLogEntry>> implements IApiLogg
       return;
     }
 
-    final current = state.value ?? [];
+    final current = await _ensureLoaded();
     final toDelete = current.where((item) => item.category == category).toList();
     final remaining = current.where((item) => item.category != category).toList();
 
