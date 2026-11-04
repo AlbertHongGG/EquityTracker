@@ -7,7 +7,6 @@ import 'package:equity_tracker/features/updater/data/github_updater_config.dart'
 import 'package:equity_tracker/features/updater/domain/release_info.dart';
 import 'package:equity_tracker/core/providers/package_info_provider.dart';
 import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
-import 'package:equity_tracker/core/logging/data/api_call_recorder.dart';
 import 'package:equity_tracker/core/logging/providers/logging_providers.dart';
 
 class GithubVersionService {
