@@ -25,6 +25,9 @@ class AutoBookkeepingState {
     this.rules = const [],
   });
 
+  /// 真實啟用狀態 (SSOT)：同時滿足「系統已授予通知存取權」與「偏好設定為開啟」
+  bool get isActive => isEnabled && isPermissionGranted;
+
   AutoBookkeepingState copyWith({
     bool? isPermissionGranted,
     bool? isEnabled,
@@ -44,6 +47,8 @@ class AutoBookkeepingState {
 }
 
 class AutoBookkeepingNotifier extends AsyncNotifier<AutoBookkeepingState> {
+  bool _pendingEnableOnGrant = false;
+
   @override
   Future<AutoBookkeepingState> build() async {
     final service = ref.read(notificationAutoBookkeepingServiceProvider);
@@ -66,11 +71,30 @@ class AutoBookkeepingNotifier extends AsyncNotifier<AutoBookkeepingState> {
 
   Future<void> checkPermission() async {
     final service = ref.read(notificationAutoBookkeepingServiceProvider);
+    final repo = ref.read(autoBookkeepingRepositoryProvider);
     final isGranted = await service.isPermissionGranted();
-    state = AsyncData(state.value!.copyWith(isPermissionGranted: isGranted));
+
+    bool targetEnabled = state.value?.isEnabled ?? true;
+    if (isGranted && _pendingEnableOnGrant) {
+      _pendingEnableOnGrant = false;
+      targetEnabled = true;
+      await repo.setEnabled(true);
+    }
+
+    state = AsyncData(state.value!.copyWith(
+      isPermissionGranted: isGranted,
+      isEnabled: targetEnabled,
+    ));
   }
 
   Future<void> openPermissionSettings() async {
+    final service = ref.read(notificationAutoBookkeepingServiceProvider);
+    await service.openPermissionSettings();
+  }
+
+  /// 使用者在抽屜點擊「設定權限」時呼叫：記錄待啟用意圖，並開啟系統設定頁
+  Future<void> requestPermissionForEnabling() async {
+    _pendingEnableOnGrant = true;
     final service = ref.read(notificationAutoBookkeepingServiceProvider);
     await service.openPermissionSettings();
   }

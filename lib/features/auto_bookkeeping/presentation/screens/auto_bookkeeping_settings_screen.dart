@@ -12,6 +12,7 @@ import 'package:equity_tracker/features/category/data/category_model.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/domain/models/notification_rule.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
 import 'package:equity_tracker/core/widgets/sheet/swipe_to_confirm_drawer.dart';
+import 'package:equity_tracker/core/widgets/sheet/permission_request_sheet.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/category_picker_sheet.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/rule_settings_tile.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/widgets/rule_edit_bottom_sheet.dart';
@@ -80,8 +81,12 @@ class _AutoBookkeepingSettingsScreenState
       categories: categories,
       onSave: (rule) {
         ref.read(autoBookkeepingNotifierProvider.notifier).saveRule(rule);
-        ref.read(inAppNotificationServiceProvider).showSuccess(
-              initialRule != null ? '已更新「${rule.name}」規則' : '已新增「${rule.name}」規則',
+        ref
+            .read(inAppNotificationServiceProvider)
+            .showSuccess(
+              initialRule != null
+                  ? '已更新「${rule.name}」規則'
+                  : '已新增「${rule.name}」規則',
             );
       },
     );
@@ -126,19 +131,34 @@ class _AutoBookkeepingSettingsScreenState
                     title: '自動記帳',
                     subtitle: '偵測推播自動記帳',
                     trailing: AppSwitch(
-                      value: state.isEnabled,
+                      value: state.isActive,
                       onChanged: (val) async {
-                        if (val && !state.isPermissionGranted) {
-                          await ref
-                              .read(autoBookkeepingNotifierProvider.notifier)
-                              .openPermissionSettings();
-                          ref
-                              .read(inAppNotificationServiceProvider)
-                              .showWarning('請在系統設定中開啟通知存取權限以啟用自動記帳');
+                        if (val) {
+                          if (!state.isPermissionGranted) {
+                            PermissionRequestSheet.show(
+                              context: context,
+                              headerTitle: 'AUTO BOOKKEEPING',
+                              icon: Icons.notifications_active_rounded,
+                              title: '開啟通知存取權限',
+                              subtitle: '授權讀取通知推播即時自動記錄消費',
+                              buttonText: '設定權限',
+                              onConfirm: () {
+                                ref
+                                    .read(
+                                      autoBookkeepingNotifierProvider.notifier,
+                                    )
+                                    .requestPermissionForEnabling();
+                              },
+                            );
+                          } else {
+                            ref
+                                .read(autoBookkeepingNotifierProvider.notifier)
+                                .toggleEnabled(true);
+                          }
                         } else {
                           ref
                               .read(autoBookkeepingNotifierProvider.notifier)
-                              .toggleEnabled(val);
+                              .toggleEnabled(false);
                         }
                       },
                     ),
@@ -216,7 +236,8 @@ class _AutoBookkeepingSettingsScreenState
                 children: state.rules.map((rule) {
                   return RuleSettingsTile(
                     rule: rule,
-                    onTap: () => _openRuleEditor(context, expenseCategories, rule),
+                    onTap: () =>
+                        _openRuleEditor(context, expenseCategories, rule),
                     onLongPress: () {
                       SwipeToConfirmDrawer.show(
                         context: context,

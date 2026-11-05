@@ -139,7 +139,7 @@ void main() {
       expect(capturedRequest!.headers['x-goog-api-key'], 'AIzaSyFakeKey12345678');
       expect(
         capturedRequest!.headers['x-goog-fieldmask'],
-        'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.types',
+        'places.displayName,places.formattedAddress,places.types',
       );
 
       // 驗證 Request Body 結構

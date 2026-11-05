@@ -52,6 +52,16 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "isPermissionGranted" -> {
                     val isGranted = isNotificationServiceEnabled()
+                    if (isGranted && !PaymentNotificationListenerService.isConnected) {
+                        try {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                                val componentName = ComponentName(applicationContext, PaymentNotificationListenerService::class.java)
+                                android.service.notification.NotificationListenerService.requestRebind(componentName)
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w("MainActivity", "Failed to requestRebind for PaymentNotificationListenerService", e)
+                        }
+                    }
                     result.success(isGranted)
                 }
                 "openPermissionSettings" -> {
