@@ -14,6 +14,7 @@ import 'package:equity_tracker/features/updater/presentation/widgets/github_upda
 
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
+import 'package:equity_tracker/features/receipt_import/services/receipt_import_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -42,6 +43,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
       // 初始化自動記帳監聽服務 (設定監聽 Native Channel)
       await ref.read(notificationAutoBookkeepingServiceProvider).init();
+
+      // 初始化收據匯入監聽服務 (設定監聽 Native Channel)
+      await ref.read(receiptImportServiceProvider).init();
 
       _checkUpdate();
     });

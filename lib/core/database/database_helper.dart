@@ -19,17 +19,22 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'equity_tracker.db');
-    return await openDatabase(
+    final db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+    await _ensureDefaultCategoriesExist(db);
+    return db;
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE transactions ADD COLUMN syncStatus TEXT DEFAULT "synced"');
+    }
+    if (oldVersion < 3) {
+      await _ensureDefaultCategoriesExist(db);
     }
   }
 
@@ -102,6 +107,7 @@ class DatabaseHelper {
       {'id': uuid.v4(), 'name': '社交', 'iconCodePoint': Icons.groups.codePoint, 'iconFontFamily': 'MaterialIcons', 'iconFontPackage': null, 'colorValue': Colors.lightBlueAccent.value, 'type': TransactionType.expense.name, 'isSystem': 1, 'isEnabled': 1, 'sortOrder': 0},
       {'id': uuid.v4(), 'name': '禮物', 'iconCodePoint': FontAwesomeIcons.gift.codePoint, 'iconFontFamily': FontAwesomeIcons.gift.fontFamily, 'iconFontPackage': FontAwesomeIcons.gift.fontPackage, 'colorValue': Colors.red.shade300.value, 'type': TransactionType.expense.name, 'isSystem': 1, 'isEnabled': 1, 'sortOrder': 0},
       {'id': uuid.v4(), 'name': '信用卡', 'iconCodePoint': FontAwesomeIcons.creditCard.codePoint, 'iconFontFamily': FontAwesomeIcons.creditCard.fontFamily, 'iconFontPackage': FontAwesomeIcons.creditCard.fontPackage, 'colorValue': Colors.orange.value, 'type': TransactionType.expense.name, 'isSystem': 1, 'isEnabled': 1, 'sortOrder': 0},
+      {'id': uuid.v4(), 'name': '發票', 'iconCodePoint': Icons.receipt_long.codePoint, 'iconFontFamily': 'MaterialIcons', 'iconFontPackage': null, 'colorValue': Colors.blueGrey.value, 'type': TransactionType.expense.name, 'isSystem': 1, 'isEnabled': 1, 'sortOrder': 0},
       {'id': uuid.v4(), 'name': '其他', 'iconCodePoint': FontAwesomeIcons.circleQuestion.codePoint, 'iconFontFamily': FontAwesomeIcons.circleQuestion.fontFamily, 'iconFontPackage': FontAwesomeIcons.circleQuestion.fontPackage, 'colorValue': Colors.grey.value, 'type': TransactionType.expense.name, 'isSystem': 1, 'isEnabled': 1, 'sortOrder': 0},
       {'id': uuid.v4(), 'name': '薪水', 'iconCodePoint': FontAwesomeIcons.moneyBillWave.codePoint, 'iconFontFamily': FontAwesomeIcons.moneyBillWave.fontFamily, 'iconFontPackage': FontAwesomeIcons.moneyBillWave.fontPackage, 'colorValue': Colors.teal.value, 'type': TransactionType.income.name, 'isSystem': 1, 'isEnabled': 1, 'sortOrder': 0},
       {'id': uuid.v4(), 'name': '投資', 'iconCodePoint': FontAwesomeIcons.chartLine.codePoint, 'iconFontFamily': FontAwesomeIcons.chartLine.fontFamily, 'iconFontPackage': FontAwesomeIcons.chartLine.fontPackage, 'colorValue': Colors.greenAccent.shade700.value, 'type': TransactionType.income.name, 'isSystem': 1, 'isEnabled': 1, 'sortOrder': 0},
@@ -114,6 +120,48 @@ class DatabaseHelper {
 
     for (var catMap in systemCategories) {
       await db.insert('categories', catMap);
+    }
+  }
+
+  Future<void> _ensureDefaultCategoriesExist(Database db) async {
+    const uuid = Uuid();
+    final categoriesToCheck = [
+      {
+        'name': '信用卡',
+        'iconCodePoint': FontAwesomeIcons.creditCard.codePoint,
+        'iconFontFamily': FontAwesomeIcons.creditCard.fontFamily,
+        'iconFontPackage': FontAwesomeIcons.creditCard.fontPackage,
+        'colorValue': Colors.orange.value,
+        'type': TransactionType.expense.name,
+        'isSystem': 1,
+        'isEnabled': 1,
+        'sortOrder': 0,
+      },
+      {
+        'name': '發票',
+        'iconCodePoint': Icons.receipt_long.codePoint,
+        'iconFontFamily': 'MaterialIcons',
+        'iconFontPackage': null,
+        'colorValue': Colors.blueGrey.value,
+        'type': TransactionType.expense.name,
+        'isSystem': 1,
+        'isEnabled': 1,
+        'sortOrder': 0,
+      },
+    ];
+
+    for (final cat in categoriesToCheck) {
+      final existing = await db.query(
+        'categories',
+        where: 'name = ? AND type = ?',
+        whereArgs: [cat['name'], cat['type']],
+      );
+      if (existing.isEmpty) {
+        await db.insert('categories', {
+          'id': uuid.v4(),
+          ...cat,
+        });
+      }
     }
   }
 }
