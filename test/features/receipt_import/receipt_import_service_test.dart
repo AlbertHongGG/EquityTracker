@@ -153,5 +153,24 @@ void main() {
       final notification = container.read(notificationControllerProvider);
       expect(notification!.message, '已成功匯入 1 筆收據帳務');
     });
+
+    test('端對端實例驗證：使用者真實分享的 URI (全聯 寶礦力水得 23.0)', () async {
+      final service = container.read(receiptImportServiceProvider);
+      const uri = 'equitytracker://receipt/import?data=%7B%22merchant%22%3A%22%E5%85%A8%E8%81%AF%E5%AF%A6%E6%A5%AD%E8%81%A4%E4%BB%BD%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8%E5%A4%A7%E5%90%8C%E5%A4%A7%E9%BE%8D%E5%88%86%E5%85%AC%E5%8F%B8%22%2C%22date%22%3A%222026-11-05T16%3A56%3A28%22%2C%22items%22%3A%5B%7B%22name%22%3A%22%E5%AF%B6%E7%A4%A6%E5%8A%9B%E6%B0%B4%E5%BE%97%22%2C%22amount%22%3A23.0%2C%22quantity%22%3A1%7D%5D%7D';
+
+      final success = await service.handleRawData(uri);
+      expect(success, isTrue);
+      expect(fakeTxRepo.insertedTransactions.length, 1);
+
+      final tx = fakeTxRepo.insertedTransactions.first;
+      expect(tx.title, '全聯實業聤份有限公司大同大龍分公司');
+      expect(tx.note, '寶礦力水得 x1');
+      expect(tx.amount, 23);
+      expect(tx.type, TransactionType.expense);
+      expect(tx.date, DateTime.parse('2026-11-05T16:56:28'));
+
+      final notification = container.read(notificationControllerProvider);
+      expect(notification!.message, '已成功匯入 1 筆收據帳務');
+    });
   });
 }

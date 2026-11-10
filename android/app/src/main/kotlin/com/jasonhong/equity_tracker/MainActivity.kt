@@ -20,12 +20,31 @@ class MainActivity : FlutterActivity() {
     private var pendingEditTxId: Long? = null
     private var pendingReceiptData: String? = null
 
+    override fun getInitialRoute(): String {
+        val data = intent?.data
+        if (data != null && "equitytracker" == data.scheme) {
+            // 阻斷外部資料 URI 污染 Flutter 初始路由，重設為預設路徑 "/"
+            return "/"
+        }
+        return super.getInitialRoute() ?: "/"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
+        val data = intent.data
+        if (data != null && "equitytracker" == data.scheme) {
+            // 阻斷 super.onNewIntent 將 equitytracker:// 推給 NavigationChannel
+            val originalIntent = Intent(intent)
+            intent.data = null
+            super.onNewIntent(intent)
+            setIntent(originalIntent)
+            handleIntent(originalIntent)
+            return
+        }
         super.onNewIntent(intent)
         setIntent(intent)
         handleIntent(intent)
