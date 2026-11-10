@@ -13,13 +13,32 @@ import 'package:equity_tracker/features/ai/domain/entities/ai_transaction_summar
 import 'package:equity_tracker/features/ai/domain/entities/ai_transaction_view_item.dart';
 import 'package:equity_tracker/features/ai/domain/ports/i_ledger_gateway.dart';
 
+/// 領域帳本防腐閘道實作 (LedgerGatewayImpl)
+///
+/// 遵循 Clean Architecture 與依賴注入 (DI) 原則：
+/// 1. 不持有任何狀態管理框架內部的 Ref 物件，為純粹的領域適配器。
+/// 2. 所有資料庫存取、狀態變更皆透過明確建構子參數注入。
 class LedgerGatewayImpl implements ILedgerGateway {
-  final Ref _ref;
+  final CategoryRepository _categoryRepo;
+  final TransactionRepository _transactionRepo;
+  final TransactionList _transactionList;
+  final bool Function() _isNotionSyncEnabled;
+  final void Function() _pushNotionPendingChanges;
+  final void Function() _onTransactionsChanged;
 
-  LedgerGatewayImpl(this._ref);
-
-  CategoryRepository get _categoryRepo => _ref.read(categoryRepositoryProvider);
-  TransactionRepository get _transactionRepo => _ref.read(transactionRepositoryProvider);
+  LedgerGatewayImpl({
+    required CategoryRepository categoryRepo,
+    required TransactionRepository transactionRepo,
+    required TransactionList transactionList,
+    required bool Function() isNotionSyncEnabled,
+    required void Function() pushNotionPendingChanges,
+    required void Function() onTransactionsChanged,
+  })  : _categoryRepo = categoryRepo,
+        _transactionRepo = transactionRepo,
+        _transactionList = transactionList,
+        _isNotionSyncEnabled = isNotionSyncEnabled,
+        _pushNotionPendingChanges = pushNotionPendingChanges,
+        _onTransactionsChanged = onTransactionsChanged;
 
   @override
   Future<List<AICategoryRef>> getActiveCategories({bool? isExpense}) async {
@@ -65,7 +84,6 @@ class LedgerGatewayImpl implements ILedgerGateway {
 
   @override
   Future<List<AITransactionViewItem>> createTransactions(List<AITransactionDraft> drafts) async {
-    final transactionNotifier = _ref.read(transactionNotifierProvider.notifier);
     final List<AITransactionViewItem> createdItems = [];
 
     for (final draft in drafts) {
@@ -92,7 +110,7 @@ class LedgerGatewayImpl implements ILedgerGateway {
       );
 
       // 呼叫 Notifier 新增（包含 Optimistic update、Notion sync、以及更新內部列表）
-      await transactionNotifier.addTransaction(tx);
+      await _transactionList.addTransaction(tx);
 
       createdItems.add(AITransactionViewItem(
         id: tx.id,
@@ -111,8 +129,7 @@ class LedgerGatewayImpl implements ILedgerGateway {
   Future<void> batchUpdateCategories(Map<int, String> txIdToNewCategoryId) async {
     if (txIdToNewCategoryId.isEmpty) return;
 
-    final notionConfig = _ref.read(notionConfigControllerProvider);
-    final isNotionEnabled = notionConfig.isEnabled;
+    final isNotionEnabled = _isNotionSyncEnabled();
 
     // 1. 執行 SQLite Batch 批次更新
     await _transactionRepo.batchUpdateTransactionsCategory(
@@ -122,16 +139,28 @@ class LedgerGatewayImpl implements ILedgerGateway {
 
     // 2. 若有開啟 Notion 同步，於背景靜默推進變更
     if (isNotionEnabled) {
-      Future.microtask(() {
-        _ref.read(notionSyncServiceProvider).pushPendingChanges(silent: true);
-      });
+      _pushNotionPendingChanges();
     }
 
     // 3. 刷新交易列表快取，確保所有 UI (如首頁/趨勢/清單) 同步呈現最新分類
-    _ref.invalidate(transactionListProvider);
+    _onTransactionsChanged();
   }
 }
 
-final ledgerGatewayProvider = Provider.autoDispose<ILedgerGateway>((ref) {
-  return LedgerGatewayImpl(ref);
+/// 領域帳本閘道 Provider (根作用域單例，非 autoDispose)
+final ledgerGatewayProvider = Provider<ILedgerGateway>((ref) {
+  return LedgerGatewayImpl(
+    categoryRepo: ref.watch(categoryRepositoryProvider),
+    transactionRepo: ref.watch(transactionRepositoryProvider),
+    transactionList: ref.watch(transactionNotifierProvider.notifier),
+    isNotionSyncEnabled: () => ref.read(notionConfigControllerProvider).isEnabled,
+    pushNotionPendingChanges: () {
+      Future.microtask(() {
+        ref.read(notionSyncServiceProvider).pushPendingChanges(silent: true);
+      });
+    },
+    onTransactionsChanged: () {
+      ref.invalidate(transactionListProvider);
+    },
+  );
 });

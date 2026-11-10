@@ -65,7 +65,7 @@ class CorrectionAgent extends BaseAgent<CorrectionInput, CorrectionResult> {
   }
 }
 
-final correctionAgentProvider = Provider.autoDispose<CorrectionAgent>((ref) {
+final correctionAgentProvider = Provider<CorrectionAgent>((ref) {
   return CorrectionAgent(
     ref.watch(aiProviderProvider),
     ref.watch(apiLogManagerProvider.notifier),

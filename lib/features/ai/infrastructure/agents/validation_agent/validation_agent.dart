@@ -58,7 +58,7 @@ class ValidationAgent extends BaseAgent<ValidationInput, ValidationResult> {
   }
 }
 
-final validationAgentProvider = Provider.autoDispose<ValidationAgent>((ref) {
+final validationAgentProvider = Provider<ValidationAgent>((ref) {
   return ValidationAgent(
     ref.watch(aiProviderProvider),
     ref.watch(apiLogManagerProvider.notifier),

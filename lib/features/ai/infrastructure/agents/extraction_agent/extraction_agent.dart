@@ -50,7 +50,7 @@ class ExtractionAgent extends BaseAgent<String, List<AITransactionDraft>> {
   }
 }
 
-final extractionAgentProvider = Provider.autoDispose<ExtractionAgent>((ref) {
+final extractionAgentProvider = Provider<ExtractionAgent>((ref) {
   return ExtractionAgent(
     ref.watch(aiProviderProvider),
     ref.watch(apiLogManagerProvider.notifier),

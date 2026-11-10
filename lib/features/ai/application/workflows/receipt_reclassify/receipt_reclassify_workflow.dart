@@ -136,7 +136,7 @@ class ReceiptReclassifyWorkflow implements IAIWorkflow {
 }
 
 final receiptReclassifyWorkflowProvider =
-    Provider.autoDispose<ReceiptReclassifyWorkflow>((ref) {
+    Provider<ReceiptReclassifyWorkflow>((ref) {
   return ReceiptReclassifyWorkflow(
     ledgerGateway: ref.watch(ledgerGatewayProvider),
     categorizationAgent: ref.watch(batchCategorizationAgentProvider),

@@ -80,7 +80,7 @@ class BatchCategorizationAgent
 }
 
 final batchCategorizationAgentProvider =
-    Provider.autoDispose<BatchCategorizationAgent>((ref) {
+    Provider<BatchCategorizationAgent>((ref) {
   return BatchCategorizationAgent(
     ref.watch(aiProviderProvider),
     ref.watch(apiLogManagerProvider.notifier),

@@ -146,7 +146,7 @@ class GoogleMapSearchService implements IMapSearchService {
   }
 }
 
-final mapSearchServiceProvider = Provider.autoDispose<IMapSearchService>((ref) {
+final mapSearchServiceProvider = Provider<IMapSearchService>((ref) {
   final config = ref.watch(aiConfigControllerProvider);
   return GoogleMapSearchService(
     apiKey: config.googleMapApiKey,

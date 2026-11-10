@@ -166,7 +166,7 @@ class BookkeepingWorkflow implements IAIWorkflow {
   }
 }
 
-final bookkeepingWorkflowProvider = Provider.autoDispose<BookkeepingWorkflow>((ref) {
+final bookkeepingWorkflowProvider = Provider<BookkeepingWorkflow>((ref) {
   final ledgerGateway = ref.watch(ledgerGatewayProvider);
   final extractionAgent = ref.watch(extractionAgentProvider);
   final storeLookupAgent = ref.watch(storeLookupAgentProvider);

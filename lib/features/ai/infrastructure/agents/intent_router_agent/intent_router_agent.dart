@@ -60,7 +60,7 @@ class IntentRouterAgent extends BaseAgent<String, IntentRouterResult> {
   }
 }
 
-final intentRouterAgentProvider = Provider.autoDispose<IntentRouterAgent>((ref) {
+final intentRouterAgentProvider = Provider<IntentRouterAgent>((ref) {
   return IntentRouterAgent(
     ref.watch(aiProviderProvider),
     ref.watch(apiLogManagerProvider.notifier),

@@ -52,7 +52,7 @@ class AIOrchestrator {
   }
 }
 
-final aiOrchestratorProvider = Provider.autoDispose<AIOrchestrator>((ref) {
+final aiOrchestratorProvider = Provider<AIOrchestrator>((ref) {
   final intentRouter = ref.watch(intentRouterAgentProvider);
   final bookkeepingWorkflow = ref.watch(bookkeepingWorkflowProvider);
   final receiptReclassifyWorkflow = ref.watch(receiptReclassifyWorkflowProvider);
