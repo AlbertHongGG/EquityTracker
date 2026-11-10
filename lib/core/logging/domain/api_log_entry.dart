@@ -85,14 +85,19 @@ class ApiLogEntry implements DeletableLog {
       } catch (_) {}
     }
 
-    if (parts.length >= 3) {
+    if (parts.length >= 4) {
+      // 支援包含底線之分類鍵值 (如 ai_intent_router, ai_category_correction, notion_sync)
+      parsedSourceName = parts[parts.length - 2];
+      final categoryKey = parts.sublist(2, parts.length - 2).join('_');
+      final categoryFromPart = ApiLogCategory.fromKey(categoryKey);
+      if (categoryFromPart != null) {
+        parsedCategory = categoryFromPart;
+      }
+    } else if (parts.length >= 3) {
       final categoryFromPart = ApiLogCategory.fromKey(parts[2]);
       if (categoryFromPart != null) {
         parsedCategory = categoryFromPart;
       }
-    }
-    if (parts.length >= 4) {
-      parsedSourceName = parts[3];
     }
 
     // 2. 從 2KB 標頭預覽中精準提取屬性 (JSON 或正則表達式)

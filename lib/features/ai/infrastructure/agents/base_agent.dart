@@ -60,23 +60,25 @@ abstract class BaseAgent<TInput, TOutput> {
 
       final isError = streamError != null;
 
-      logManager?.logInteraction(
-        ApiLogRecord(
-          timestamp: isoTimestamp,
-          category: category,
-          sourceName: name,
-          durationMs: durationMs,
-          isError: isError,
-          request: ApiLogRequest(
-            prompt: prompt,
-            systemPrompt: systemPrompt,
+      try {
+        await logManager?.logInteraction(
+          ApiLogRecord(
+            timestamp: isoTimestamp,
+            category: category,
+            sourceName: name,
+            durationMs: durationMs,
+            isError: isError,
+            request: ApiLogRequest(
+              prompt: prompt,
+              systemPrompt: systemPrompt,
+            ),
+            response: ApiLogResponse(
+              body: parsedResponse,
+              error: streamError,
+            ),
           ),
-          response: ApiLogResponse(
-            body: parsedResponse,
-            error: streamError,
-          ),
-        ),
-      );
+        );
+      } catch (_) {}
     }
   }
 
