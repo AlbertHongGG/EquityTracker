@@ -26,8 +26,9 @@ class _MockApiLogEntry extends ApiLogEntry {
 }
 
 void main() {
-  group('LogInspectorHeader Widget Tests (方案 1: 緊湊兩行流)', () {
-    testWidgets('renders category, SUCCESS badge, duration, and timestamp correctly', (tester) async {
+  group('LogInspectorHeader Widget Tests (LensWise 風格隨動看板)', () {
+    testWidgets('renders sourceName, status code badge (200), duration, timestamp, and copy button', (tester) async {
+      bool copied = false;
       final entry = ApiLogEntry(
         id: 'test_log_1',
         file: File('test.json'),
@@ -45,25 +46,28 @@ void main() {
           home: Scaffold(
             body: LogInspectorHeader(
               entry: entry,
-              method: 'POST',
+              onCopyLog: () => copied = true,
             ),
           ),
         ),
       );
 
-      // 驗證分類文字與 Method
-      expect(find.text('AI 記帳解析'), findsOneWidget);
-      expect(find.text('POST'), findsOneWidget);
-
-      // 驗證狀態徽章為 SUCCESS
-      expect(find.text('SUCCESS'), findsOneWidget);
+      // 驗證標題與 200 徽章
+      expect(find.text('Extraction'), findsOneWidget);
+      expect(find.text('200'), findsOneWidget);
 
       // 驗證耗時與時間戳記
       expect(find.text('1774 ms'), findsOneWidget);
       expect(find.text('2026/11/04 12:58:17'), findsOneWidget);
+
+      // 驗證複製按鈕與點擊互動
+      final copyBtn = find.byIcon(Icons.copy_rounded);
+      expect(copyBtn, findsOneWidget);
+      await tester.tap(copyBtn);
+      expect(copied, isTrue);
     });
 
-    testWidgets('renders ERROR badge and error duration color on failure', (tester) async {
+    testWidgets('renders 500 status code badge on error', (tester) async {
       final entry = ApiLogEntry(
         id: 'test_log_error',
         file: File('test_error.json'),
@@ -86,14 +90,14 @@ void main() {
         ),
       );
 
-      // 驗證 ERROR 狀態
-      expect(find.text('ERROR'), findsOneWidget);
-      expect(find.text('Notion 同步'), findsOneWidget);
+      // 驗證 500 錯誤狀態碼
+      expect(find.text('NotionSync'), findsOneWidget);
+      expect(find.text('500'), findsOneWidget);
       expect(find.text('3450 ms'), findsOneWidget);
       expect(find.text('2026/11/04 13:00:00'), findsOneWidget);
     });
 
-    testWidgets('ApiLogDetailScreen integrates LogInspectorHeader cleanly without AppBar actions', (tester) async {
+    testWidgets('ApiLogDetailScreen renders without AppBar and integrates LogInspectorHeader cleanly', (tester) async {
       final entry = _MockApiLogEntry(
         id: 'test_screen_log',
         file: File('mock.json'),
@@ -104,8 +108,8 @@ void main() {
         isError: false,
         displayTime: '2026/11/04 12:00:00',
         mockPayload: {
-          'request': {'method': 'POST', 'prompt': 'test input'},
-          'response': {'status': 'ok'},
+          'request': {'prompt': 'test input'},
+          'response': {'status_code': 200, 'result': 'ok'},
         },
       );
 
@@ -115,18 +119,18 @@ void main() {
         ),
       );
 
-      // 讓 FutureBuilder 完成微任務
+      // 讓 FutureBuilder 完成
       await tester.pump();
       await tester.pump();
 
-      // 標題顯示在 AppBar
-      expect(find.text('Extraction'), findsOneWidget);
+      // 驗證畫面上無任何 AppBar
+      expect(find.byType(AppBar), findsNothing);
 
-      // AppBar 上不再有孤立的 actions，SUCCESS 與分類位於 LogInspectorHeader 內部
-      expect(find.text('SUCCESS'), findsOneWidget);
-      expect(find.text('AI 記帳解析'), findsOneWidget);
-      expect(find.text('POST'), findsOneWidget);
-      expect(find.text('1200 ms'), findsOneWidget);
+      // 驗證標題與 200 徽章隨動呈現 (Header 內部)
+      expect(find.descendant(of: find.byType(LogInspectorHeader), matching: find.text('Extraction')), findsOneWidget);
+      expect(find.descendant(of: find.byType(LogInspectorHeader), matching: find.text('200')), findsOneWidget);
+      expect(find.descendant(of: find.byType(LogInspectorHeader), matching: find.text('1200 ms')), findsOneWidget);
+      expect(find.byIcon(Icons.copy_rounded), findsOneWidget);
     });
   });
 }

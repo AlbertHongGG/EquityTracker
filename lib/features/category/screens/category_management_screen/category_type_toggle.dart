@@ -21,9 +21,9 @@ class CategoryTypeToggle extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isExpense = selectedType == TransactionType.expense;
 
-    const double width = 230;
-    const double height = 48;
-    const double padding = 4;
+    const double width = 200;
+    const double height = 42;
+    const double padding = 3;
     const double pillWidth = (width - padding * 2) / 2;
     const double pillHeight = height - padding * 2;
 
@@ -35,7 +35,7 @@ class CategoryTypeToggle extends StatelessWidget {
       padding: const EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E2130) : const Color(0xFFE5E7EB),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(19),
       ),
       child: Stack(
         children: [
@@ -51,7 +51,7 @@ class CategoryTypeToggle extends StatelessWidget {
               height: pillHeight,
               decoration: BoxDecoration(
                 color: pillColor,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color: pillColor.withValues(alpha: 0.35),
@@ -75,11 +75,13 @@ class CategoryTypeToggle extends StatelessWidget {
                       duration: const Duration(milliseconds: 250),
                       style: TextStyle(
                         fontFamily: 'Outfit',
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: isExpense
                             ? Colors.white
-                            : (isDark ? Colors.white60 : const Color(0xFF6B7280)),
+                            : (isDark
+                                  ? Colors.white60
+                                  : const Color(0xFF6B7280)),
                       ),
                       child: const Text('Expense'),
                     ),
@@ -95,11 +97,13 @@ class CategoryTypeToggle extends StatelessWidget {
                       duration: const Duration(milliseconds: 250),
                       style: TextStyle(
                         fontFamily: 'Outfit',
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: !isExpense
                             ? Colors.white
-                            : (isDark ? Colors.white60 : const Color(0xFF6B7280)),
+                            : (isDark
+                                  ? Colors.white60
+                                  : const Color(0xFF6B7280)),
                       ),
                       child: const Text('Income'),
                     ),

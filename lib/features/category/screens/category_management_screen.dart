@@ -43,32 +43,20 @@ class CategoryManagementScreen extends ConsumerWidget {
                     ),
                   ),
                   Positioned(
-                    right: 4,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: controller.toggleEditMode,
-                        borderRadius: BorderRadius.circular(22),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: state.isEditMode
-                                ? theme.primaryColor.withValues(alpha: 0.15)
-                                : (isDark
-                                    ? Colors.white.withValues(alpha: 0.08)
-                                    : Colors.black.withValues(alpha: 0.05)),
-                          ),
-                          child: Icon(
-                            state.isEditMode ? Icons.check_rounded : Icons.edit_outlined,
-                            size: 20,
-                            color: state.isEditMode
-                                ? theme.primaryColor
-                                : (isDark ? Colors.white : const Color(0xFF1F2937)),
-                          ),
-                        ),
+                    right: 0,
+                    child: IconButton(
+                      onPressed: controller.toggleEditMode,
+                      icon: Icon(
+                        state.isEditMode ? Icons.check_rounded : Icons.edit_outlined,
+                        size: 22,
+                        color: state.isEditMode
+                            ? theme.primaryColor
+                            : (isDark ? Colors.white70 : const Color(0xFF4B5563)),
                       ),
+                      tooltip: state.isEditMode ? '完成' : '編輯分類',
+                      splashRadius: 20,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                     ),
                   ),
                 ],
