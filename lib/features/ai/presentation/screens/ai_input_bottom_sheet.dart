@@ -91,14 +91,19 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    ref.listen<AISessionState>(aiSessionControllerProvider, (previous, next) => _scrollToBottom());
+    ref.listen<AISessionState>(
+      aiSessionControllerProvider,
+      (previous, next) => _scrollToBottom(),
+    );
 
     ref.listen<VoiceState>(voiceControllerProvider, (previous, next) {
       if (next.recognizedText != previous?.recognizedText) {
         final newText = _baseTypedText.isEmpty
             ? next.recognizedText
             : (_baseTypedText +
-                (next.recognizedText.isNotEmpty ? ' ${next.recognizedText}' : ''));
+                  (next.recognizedText.isNotEmpty
+                      ? ' ${next.recognizedText}'
+                      : ''));
 
         if (_controller.text != newText) {
           _controller.text = newText;
@@ -109,18 +114,21 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
         }
       }
       if (next.hasError && !(previous?.hasError ?? false)) {
-        ref.read(inAppNotificationServiceProvider).showError('無法啟動語音辨識，請確認麥克風權限或系統是否支援。');
+        ref
+            .read(inAppNotificationServiceProvider)
+            .showError('無法啟動語音辨識，請確認麥克風權限或系統是否支援。');
       }
     });
 
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: keyboardHeight,
-      ),
+      padding: EdgeInsets.only(bottom: keyboardHeight),
       child: Container(
-        height: math.max(0.0, (MediaQuery.sizeOf(context).height * 0.85) - keyboardHeight),
+        height: math.max(
+          0.0,
+          (MediaQuery.sizeOf(context).height * 0.85) - keyboardHeight,
+        ),
         decoration: BoxDecoration(
           color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -145,13 +153,20 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                       : Colors.white.withValues(alpha: 0.5),
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                    itemCount: sessionState.messages.length +
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
+                    itemCount:
+                        sessionState.messages.length +
                         (sessionState.isProcessing ? 1 : 0) +
                         (sessionState.suspendedState != null ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index < sessionState.messages.length) {
-                        return _buildChatBubble(sessionState.messages[index], isDark);
+                        return _buildChatBubble(
+                          sessionState.messages[index],
+                          isDark,
+                        );
                       }
 
                       int offset = sessionState.messages.length;
@@ -266,10 +281,16 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      color: Theme.of(
+                        context,
+                      ).primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.auto_awesome, color: Theme.of(context).primaryColor, size: 20),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Theme.of(context).primaryColor,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -284,12 +305,17 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                 ],
               ),
               IconButton(
-                icon: Icon(Icons.terminal_rounded, color: isDark ? Colors.white54 : Colors.black54),
+                icon: Icon(
+                  Icons.terminal_rounded,
+                  color: isDark ? Colors.white54 : Colors.black54,
+                ),
                 tooltip: 'Developer Logs',
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ApiLogViewerScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const ApiLogViewerScreen(),
+                    ),
                   );
                 },
               ),
@@ -312,7 +338,9 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+              color: isDark
+                  ? Colors.white10
+                  : Colors.black.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -330,7 +358,9 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser) ...[
@@ -354,8 +384,8 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                 color: isUser
                     ? Theme.of(context).primaryColor
                     : (isError
-                        ? Colors.red.withValues(alpha: 0.1)
-                        : (isDark ? AppColors.surfaceDark : Colors.white)),
+                          ? Colors.red.withValues(alpha: 0.1)
+                          : (isDark ? AppColors.surfaceDark : Colors.white)),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -382,8 +412,8 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                       color: isUser
                           ? Colors.white
                           : (isError
-                              ? Colors.red
-                              : (isDark ? Colors.white : Colors.black87)),
+                                ? Colors.red
+                                : (isDark ? Colors.white : Colors.black87)),
                     ),
                   ),
                   if (message.payload != null)
@@ -410,8 +440,14 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-            child: Icon(Icons.smart_toy_outlined, size: 16, color: Theme.of(context).primaryColor),
+            backgroundColor: Theme.of(
+              context,
+            ).primaryColor.withValues(alpha: 0.1),
+            child: Icon(
+              Icons.smart_toy_outlined,
+              size: 16,
+              color: Theme.of(context).primaryColor,
+            ),
           ),
           const SizedBox(width: 8),
           Flexible(
@@ -453,28 +489,34 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                   ),
                   if (sessionState.thinkingSteps.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    ...sessionState.thinkingSteps.map((step) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.check_circle_outline,
-                                  size: 12,
-                                  color: isDark ? Colors.white54 : Colors.black54),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  step,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark ? Colors.white54 : Colors.black54,
-                                    height: 1.2,
-                                  ),
+                    ...sessionState.thinkingSteps.map(
+                      (step) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              size: 12,
+                              color: isDark ? Colors.white54 : Colors.black54,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                step,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? Colors.white54
+                                      : Colors.black54,
+                                  height: 1.2,
                                 ),
                               ),
-                            ],
-                          ),
-                        )),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -485,7 +527,11 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
     );
   }
 
-  Widget _buildInputArea(AISessionState sessionState, VoiceState voiceState, bool isDark) {
+  Widget _buildInputArea(
+    AISessionState sessionState,
+    VoiceState voiceState,
+    bool isDark,
+  ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
@@ -504,7 +550,9 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.black.withValues(alpha: 0.2) : const Color(0xFFF8FAFC),
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.2)
+                      : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: isDark ? Colors.white12 : Colors.black12,
@@ -524,8 +572,8 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                           hintText: voiceState.isListening
                               ? '聆聽中...'
                               : (sessionState.suspendedState != null
-                                  ? '請輸入回答...'
-                                  : '記帳、或輸入「幫我重新分類發票」...'),
+                                    ? '請輸入回答...'
+                                    : '請輸入需求...'),
                           hintStyle: TextStyle(
                             color: voiceState.isListening
                                 ? Theme.of(context).primaryColor
@@ -548,7 +596,9 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                         }
                       },
                       onLongPressUp: () {
-                        ref.read(voiceControllerProvider.notifier).stopListening();
+                        ref
+                            .read(voiceControllerProvider.notifier)
+                            .stopListening();
                       },
                       onTap: () {
                         _handleMicToggle(voiceState.isListening);
@@ -557,7 +607,9 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: voiceState.isListening
-                              ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+                              ? Theme.of(
+                                  context,
+                                ).primaryColor.withValues(alpha: 0.1)
                               : Colors.transparent,
                           shape: BoxShape.circle,
                         ),
@@ -570,7 +622,10 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.send_rounded, color: Theme.of(context).primaryColor),
+                      icon: Icon(
+                        Icons.send_rounded,
+                        color: Theme.of(context).primaryColor,
+                      ),
                       onPressed: () => _handleSubmit(),
                     ),
                     const SizedBox(width: 4),
