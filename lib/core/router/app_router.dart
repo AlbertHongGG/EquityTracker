@@ -16,37 +16,12 @@ import 'package:equity_tracker/features/category/data/category_model.dart';
 import 'package:equity_tracker/features/transaction/data/recurring_transaction_model.dart';
 import 'package:equity_tracker/core/logging/presentation/screens/system_notification_log_screen.dart';
 import 'package:equity_tracker/core/logging/presentation/screens/api_log_viewer_screen.dart';
-import 'package:equity_tracker/features/receipt_import/services/receipt_import_service.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: globalNavigatorKey,
     initialLocation: '/',
-    redirect: (context, state) {
-      final uri = state.uri;
-      if (uri.scheme == 'equitytracker' || uri.path == '/receipt/import') {
-        final data = uri.queryParameters['data'];
-        if (data != null && data.trim().isNotEmpty) {
-          Future.microtask(() {
-            ref.read(receiptImportServiceProvider).handleRawData(data);
-          });
-        }
-        return '/home';
-      }
-      return null;
-    },
-    errorBuilder: (context, state) {
-      final uri = state.uri;
-      if (uri.scheme == 'equitytracker' || uri.path == '/receipt/import') {
-        final data = uri.queryParameters['data'];
-        if (data != null && data.trim().isNotEmpty) {
-          Future.microtask(() {
-            ref.read(receiptImportServiceProvider).handleRawData(data);
-          });
-        }
-      }
-      return const HomeScreen();
-    },
+    errorBuilder: (context, state) => const HomeScreen(),
     routes: [
       GoRoute(
         path: '/',
@@ -55,18 +30,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeScreen(),
-      ),
-      GoRoute(
-        path: '/receipt/import',
-        redirect: (context, state) {
-          final data = state.uri.queryParameters['data'];
-          if (data != null && data.trim().isNotEmpty) {
-            Future.microtask(() {
-              ref.read(receiptImportServiceProvider).handleRawData(data);
-            });
-          }
-          return '/home';
-        },
       ),
       GoRoute(
         path: '/settings',

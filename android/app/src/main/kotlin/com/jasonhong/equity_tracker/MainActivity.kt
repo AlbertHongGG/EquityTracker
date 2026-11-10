@@ -8,6 +8,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.jasonhong.equity_tracker.autobookkeeping.AutoBookkeepingNotifier
 import com.jasonhong.equity_tracker.autobookkeeping.AutoBookkeepingPipeline
 import com.jasonhong.equity_tracker.autobookkeeping.RawNotificationEvent
+import com.jasonhong.equity_tracker.receiptimport.ReceiptImportPipeline
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,19 +16,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.jasonhong.equitytracker/notification_listener"
     private var methodChannel: MethodChannel? = null
-    private val RECEIPT_CHANNEL = "com.jasonhong.equitytracker/receipt_import"
-    private var receiptMethodChannel: MethodChannel? = null
     private var pendingEditTxId: Long? = null
-    private var pendingReceiptData: String? = null
-
-    override fun getInitialRoute(): String {
-        val data = intent?.data
-        if (data != null && "equitytracker" == data.scheme) {
-            // 阻斷外部資料 URI 污染 Flutter 初始路由，重設為預設路徑 "/"
-            return "/"
-        }
-        return super.getInitialRoute() ?: "/"
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,16 +24,6 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
-        val data = intent.data
-        if (data != null && "equitytracker" == data.scheme) {
-            // 阻斷 super.onNewIntent 將 equitytracker:// 推給 NavigationChannel
-            val originalIntent = Intent(intent)
-            intent.data = null
-            super.onNewIntent(intent)
-            setIntent(originalIntent)
-            handleIntent(originalIntent)
-            return
-        }
         super.onNewIntent(intent)
         setIntent(intent)
         handleIntent(intent)
@@ -62,41 +41,6 @@ class MainActivity : FlutterActivity() {
             } else {
                 // 冷啟動：暫存待 Flutter 引擎就緒後透過 getInitialEditTxId 取得
                 pendingEditTxId = txId
-            }
-        }
-
-        // 處理收據分享 (Deep Link 或 ACTION_SEND)
-        handleReceiptIntent(intent)
-    }
-
-    private fun handleReceiptIntent(intent: Intent) {
-        var receiptData: String? = null
-
-        // 1. Deep Link: equitytracker://receipt/import?data=...
-        if (Intent.ACTION_VIEW == intent.action) {
-            val uri = intent.data
-            if (uri != null && "equitytracker" == uri.scheme) {
-                val dataParam = uri.getQueryParameter("data")
-                receiptData = if (!dataParam.isNullOrEmpty()) {
-                    dataParam
-                } else {
-                    uri.toString()
-                }
-            }
-        }
-        // 2. Share Intent: ACTION_SEND (純文字或 JSON)
-        else if (Intent.ACTION_SEND == intent.action) {
-            if ("text/plain" == intent.type || "application/json" == intent.type || intent.type?.startsWith("text/") == true) {
-                receiptData = intent.getStringExtra(Intent.EXTRA_TEXT)
-            }
-        }
-
-        if (!receiptData.isNullOrEmpty()) {
-            val channel = receiptMethodChannel
-            if (channel != null) {
-                channel.invokeMethod("onReceiptDataReceived", receiptData)
-            } else {
-                pendingReceiptData = receiptData
             }
         }
     }
@@ -164,34 +108,26 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // 註冊交易寫入成功回呼，向 Flutter 推播通知
+        // 註冊刷卡交易寫入成功回呼，向 Flutter 推播通知
         AutoBookkeepingPipeline.getInstance(applicationContext).setTransactionListener { txId ->
             runOnUiThread {
                 methodChannel?.invokeMethod("onTransactionAdded", mapOf("id" to txId))
             }
         }
 
-        receiptMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RECEIPT_CHANNEL)
-        receiptMethodChannel?.setMethodCallHandler { call, result ->
-            when (call.method) {
-                "getInitialReceiptData" -> {
-                    val data = pendingReceiptData
-                    pendingReceiptData = null
-                    result.success(data)
-                }
-                else -> {
-                    result.notImplemented()
-                }
+        // 註冊收據匯入寫入成功回呼，向 Flutter 推播通知
+        ReceiptImportPipeline.getInstance(applicationContext).setTransactionListener { txId ->
+            runOnUiThread {
+                methodChannel?.invokeMethod("onTransactionAdded", mapOf("id" to txId))
             }
         }
     }
 
     override fun onDestroy() {
         AutoBookkeepingPipeline.getInstance(applicationContext).setTransactionListener(null)
+        ReceiptImportPipeline.getInstance(applicationContext).setTransactionListener(null)
         methodChannel?.setMethodCallHandler(null)
-        receiptMethodChannel?.setMethodCallHandler(null)
         methodChannel = null
-        receiptMethodChannel = null
         super.onDestroy()
     }
 

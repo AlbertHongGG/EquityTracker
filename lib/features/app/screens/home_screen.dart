@@ -14,7 +14,8 @@ import 'package:equity_tracker/features/updater/presentation/widgets/github_upda
 
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
 import 'package:equity_tracker/features/auto_bookkeeping/presentation/providers/auto_bookkeeping_notifier.dart';
-import 'package:equity_tracker/features/receipt_import/services/receipt_import_service.dart';
+import 'package:equity_tracker/features/notion_sync/controllers/notion_config_controller.dart';
+import 'package:equity_tracker/features/notion_sync/services/notion_sync_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -44,9 +45,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       // 初始化自動記帳監聽服務 (設定監聽 Native Channel)
       await ref.read(notificationAutoBookkeepingServiceProvider).init();
 
-      // 初始化收據匯入監聽服務 (設定監聽 Native Channel)
-      await ref.read(receiptImportServiceProvider).init();
-
       _checkUpdate();
     });
   }
@@ -74,6 +72,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       // App 回到前景時，自動刷新帳務列表（以反映背景原生管線寫入的新交易）
       ref.invalidate(transactionListProvider);
       ref.read(autoBookkeepingNotifierProvider.notifier).checkPermission();
+
+      // 若啟用 Notion 同步，檢查並推播背景寫入之帳務
+      if (ref.read(notionConfigControllerProvider).isEnabled) {
+        Future.microtask(() {
+          ref.read(notionSyncServiceProvider).pushPendingChanges(silent: true);
+        });
+      }
     }
   }
 

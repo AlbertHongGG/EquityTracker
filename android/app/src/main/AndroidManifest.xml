@@ -41,6 +41,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+        </activity>
+
+        <!-- Headless Receipt Import Activity for zero-jump background ingestion -->
+        <activity
+            android:name=".receiptimport.ReceiptImportActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:exported="true">
             <!-- Deep Link for Receipt Import: equitytracker://receipt/import?data=... -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
