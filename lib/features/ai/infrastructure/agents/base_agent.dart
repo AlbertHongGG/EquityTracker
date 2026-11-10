@@ -14,18 +14,9 @@ abstract class BaseAgent<TInput, TOutput> {
   BaseAgent(
     this.name,
     this.provider, {
-    ApiLogCategory? category,
+    required this.category,
     this.logManager,
-  }) : category = category ?? _deriveCategory(name);
-
-  static ApiLogCategory _deriveCategory(String name) {
-    if (name.contains('Extraction')) return ApiLogCategory.aiExtraction;
-    if (name.contains('Store')) return ApiLogCategory.aiStoreLookup;
-    if (name.contains('Validation') || name.contains('Correction')) {
-      return ApiLogCategory.aiValidation;
-    }
-    return ApiLogCategory.aiExtraction;
-  }
+  });
 
   Future<TOutput> execute(TInput input, {void Function(String)? onChunk});
 

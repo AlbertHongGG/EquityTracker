@@ -5,12 +5,18 @@ import 'package:equity_tracker/features/ai/infrastructure/agents/base_agent.dart
 import 'package:equity_tracker/features/ai/infrastructure/providers/provider_factory.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/ai_provider.dart';
 import 'package:equity_tracker/features/ai/infrastructure/agents/extraction_agent/prompts.dart';
+import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
 import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
 import 'package:equity_tracker/core/logging/domain/i_api_logger.dart';
 
 class ExtractionAgent extends BaseAgent<String, List<AITransactionDraft>> {
   ExtractionAgent(AIProvider provider, [IApiLogger? logManager])
-      : super('Extraction', provider, logManager: logManager);
+      : super(
+          'Extraction',
+          provider,
+          category: ApiLogCategory.aiExtraction,
+          logManager: logManager,
+        );
 
   @override
   Future<List<AITransactionDraft>> execute(

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:equity_tracker/features/ai/domain/models/ai_provider_config.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/ai_provider.dart';
 import 'package:equity_tracker/features/ai/domain/exceptions/ai_connection_error.dart';
 
@@ -15,12 +16,12 @@ class GoogleAiStudioProvider implements AIProvider {
 
   final String _apiKey;
   final String _modelName;
-  final String _thinkingLevel;
+  final GeminiThinkingLevel _thinkingLevel;
 
   GoogleAiStudioProvider({
     required String apiKey,
     required String modelName,
-    String thinkingLevel = 'low',
+    GeminiThinkingLevel thinkingLevel = GeminiThinkingLevel.low,
   })  : _apiKey = apiKey,
         _modelName = modelName,
         _thinkingLevel = thinkingLevel;
@@ -47,10 +48,10 @@ class GoogleAiStudioProvider implements AIProvider {
       };
     }
 
-    if (_thinkingLevel.isNotEmpty) {
+    if (_thinkingLevel.value.isNotEmpty) {
       body['generationConfig'] = {
         'thinkingConfig': {
-          'thinkingLevel': _thinkingLevel,
+          'thinkingLevel': _thinkingLevel.value,
         }
       };
     }

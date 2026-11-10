@@ -25,7 +25,7 @@ class NotificationLogRecord {
       'title': title,
       'message': message,
     };
-    raw.removeWhere((key, value) => value == null || (value is String && value.trim().isEmpty));
+    raw.removeWhere((key, value) => value == null || value.trim().isEmpty);
     return raw;
   }
 
@@ -35,13 +35,7 @@ class NotificationLogRecord {
     final id = fileName.replaceAll('.json', '');
 
     final dt = DateTime.tryParse(timestamp) ?? DateTime.now();
-    NotificationType parsedType = NotificationType.info;
-    final lowerType = type.toLowerCase().trim();
-    if (lowerType == 'success') parsedType = NotificationType.success;
-    if (lowerType == 'error') parsedType = NotificationType.error;
-    if (lowerType == 'warning') parsedType = NotificationType.warning;
-    if (lowerType == 'info') parsedType = NotificationType.info;
-
+    final parsedType = NotificationType.fromKey(type);
     final displayTime = DateFormat('yyyy/MM/dd HH:mm:ss').format(dt);
 
     return NotificationLogEntry(
@@ -103,12 +97,7 @@ class NotificationLogEntry implements DeletableLog {
           if (dt != null) parsedTime = dt;
         }
 
-        final typeStr = (decoded['type'] as String?)?.toLowerCase();
-        if (typeStr == 'success') parsedType = NotificationType.success;
-        if (typeStr == 'error') parsedType = NotificationType.error;
-        if (typeStr == 'warning') parsedType = NotificationType.warning;
-        if (typeStr == 'info') parsedType = NotificationType.info;
-
+        parsedType = NotificationType.fromKey(decoded['type'] as String?);
         parsedTitle = decoded['title'] as String?;
         parsedMessage = decoded['message'] as String? ?? '';
       } catch (_) {}

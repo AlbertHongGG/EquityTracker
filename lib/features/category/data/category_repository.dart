@@ -7,20 +7,11 @@ class CategoryRepository {
 
   Future<List<CategoryModel>> getCategories() async {
     final db = await _dbHelper.database;
-    try {
-      final List<Map<String, dynamic>> maps = await db.query(
-        'categories',
-        orderBy: 'sortOrder ASC',
-      );
-      return List.generate(maps.length, (i) => CategoryModel.fromMap(maps[i]));
-    } catch (e) {
-      if (e.toString().contains('sortOrder')) {
-        await db.execute('ALTER TABLE categories ADD COLUMN sortOrder INTEGER DEFAULT 0');
-        final List<Map<String, dynamic>> maps = await db.query('categories', orderBy: 'sortOrder ASC');
-        return List.generate(maps.length, (i) => CategoryModel.fromMap(maps[i]));
-      }
-      rethrow;
-    }
+    final List<Map<String, dynamic>> maps = await db.query(
+      'categories',
+      orderBy: 'sortOrder ASC',
+    );
+    return List.generate(maps.length, (i) => CategoryModel.fromMap(maps[i]));
   }
 
   Future<CategoryModel?> getCategoryById(String id) async {

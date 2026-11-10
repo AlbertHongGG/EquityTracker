@@ -3,7 +3,6 @@ import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
 import 'package:equity_tracker/core/logging/domain/api_log_entry.dart';
 import 'package:equity_tracker/core/logging/data/log_file_storage.dart';
 import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
-import 'package:equity_tracker/core/logging/data/notification_log_manager.dart';
 
 import 'package:equity_tracker/core/logging/data/api_call_recorder.dart';
 

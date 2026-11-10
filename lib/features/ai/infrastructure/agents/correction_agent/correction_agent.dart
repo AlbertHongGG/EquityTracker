@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
 import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
 import 'package:equity_tracker/core/logging/domain/i_api_logger.dart';
 import 'package:equity_tracker/features/ai/domain/entities/ai_category_ref.dart';
@@ -30,7 +31,12 @@ class CorrectionResult {
 
 class CorrectionAgent extends BaseAgent<CorrectionInput, CorrectionResult> {
   CorrectionAgent(AIProvider provider, [IApiLogger? logManager])
-      : super('Correction', provider, logManager: logManager);
+      : super(
+          'Correction',
+          provider,
+          category: ApiLogCategory.aiValidation,
+          logManager: logManager,
+        );
 
   @override
   Future<CorrectionResult> execute(CorrectionInput input, {void Function(String)? onChunk}) async {

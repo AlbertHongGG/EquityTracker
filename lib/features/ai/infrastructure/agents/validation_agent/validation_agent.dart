@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
 import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
 import 'package:equity_tracker/core/logging/domain/i_api_logger.dart';
 import 'package:equity_tracker/features/ai/domain/entities/ai_transaction_draft.dart';
@@ -32,7 +33,12 @@ class ValidationResult {
 
 class ValidationAgent extends BaseAgent<ValidationInput, ValidationResult> {
   ValidationAgent(AIProvider provider, [IApiLogger? logManager])
-      : super('Validation', provider, logManager: logManager);
+      : super(
+          'Validation',
+          provider,
+          category: ApiLogCategory.aiValidation,
+          logManager: logManager,
+        );
 
   @override
   Future<ValidationResult> execute(ValidationInput input, {void Function(String)? onChunk}) async {

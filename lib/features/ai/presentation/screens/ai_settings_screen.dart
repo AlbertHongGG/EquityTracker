@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/features/ai/domain/models/ai_provider_config.dart';
 import 'package:equity_tracker/features/ai/presentation/controllers/ai_config_controller.dart';
-import 'package:equity_tracker/core/theme/app_colors.dart';
 import 'package:equity_tracker/core/widgets/app_switch.dart';
 import 'package:equity_tracker/core/widgets/premium_config_card.dart';
 import 'package:equity_tracker/core/widgets/premium_config_header.dart';
@@ -172,8 +170,8 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
 
   void _showProviderSelectorBottomSheet(AIConfigState state, bool isDark) {
     final titleColor = isDark
-        ? Colors.white.withOpacity(0.54)
-        : Colors.black.withOpacity(0.54);
+        ? Colors.white.withValues(alpha: 0.54)
+        : Colors.black.withValues(alpha: 0.54);
 
     showModalBottomSheet(
       context: context,
@@ -255,11 +253,11 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
 
   void _showThinkingLevelBottomSheet(AIConfigState state, bool isDark) {
     final titleColor = isDark
-        ? Colors.white.withOpacity(0.54)
-        : Colors.black.withOpacity(0.54);
+        ? Colors.white.withValues(alpha: 0.54)
+        : Colors.black.withValues(alpha: 0.54);
 
     final studioConfig = state.activeConfig as GoogleAiStudioConfig;
-    final currentLevel = GeminiThinkingLevel.fromValue(studioConfig.thinkingLevel);
+    final currentLevel = studioConfig.thinkingLevel;
 
     showModalBottomSheet(
       context: context,
@@ -332,7 +330,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
                         ? Icon(Icons.check_circle_rounded, color: Theme.of(context).primaryColor)
                         : null,
                       onTap: () {
-                        final updated = studioConfig.copyWith(thinkingLevel: level.value);
+                        final updated = studioConfig.copyWith(thinkingLevel: level);
                         ref.read(aiConfigControllerProvider.notifier).saveConfig(
                           activeProviderConfig: updated,
                         );
@@ -438,7 +436,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
 
   Widget _buildThinkingLevelTile(AIConfigState state, bool isDark, {bool isEnabled = true}) {
     final studioConfig = state.activeConfig as GoogleAiStudioConfig;
-    final currentLevel = GeminiThinkingLevel.fromValue(studioConfig.thinkingLevel);
+    final currentLevel = studioConfig.thinkingLevel;
 
     return GestureDetector(
       onTap: isEnabled ? () => _showThinkingLevelBottomSheet(state, isDark) : null,

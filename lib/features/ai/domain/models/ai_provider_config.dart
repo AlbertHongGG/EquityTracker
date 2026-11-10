@@ -168,46 +168,49 @@ enum GeminiThinkingLevel {
 
   const GeminiThinkingLevel(this.value, this.label, this.description);
 
+  /// 嚴格依據標準 value 反序列化，若非約定值則安全 Fallback 為 low
   static GeminiThinkingLevel fromValue(String? raw) {
     if (raw == null) return GeminiThinkingLevel.low;
-    final lower = raw.trim().toLowerCase();
-    return GeminiThinkingLevel.values.firstWhere(
-      (e) => e.value == lower || e.name.toLowerCase() == lower || e.label == raw.trim(),
-      orElse: () => GeminiThinkingLevel.low,
-    );
+    final normalized = raw.trim().toLowerCase();
+    for (final level in GeminiThinkingLevel.values) {
+      if (level.value == normalized) {
+        return level;
+      }
+    }
+    return GeminiThinkingLevel.low;
   }
 }
 
 /// Google AI Studio 供應商專屬配置 (1:1 對齊 LensWise)
 class GoogleAiStudioConfig extends ProviderConfig {
   final String apiKey;
-  final String thinkingLevel;
+  final GeminiThinkingLevel thinkingLevel;
 
   const GoogleAiStudioConfig({
     super.modelName = GoogleAiStudioModel.flash38,
     this.apiKey = '',
-    this.thinkingLevel = 'low',
+    this.thinkingLevel = GeminiThinkingLevel.low,
   });
 
   @override
   Map<String, dynamic> toJson() => {
         'modelName': modelName,
         'apiKey': apiKey,
-        'thinkingLevel': thinkingLevel,
+        'thinkingLevel': thinkingLevel.value,
       };
 
   factory GoogleAiStudioConfig.fromJson(Map<String, dynamic> json) {
     return GoogleAiStudioConfig(
       modelName: json['modelName'] ?? GoogleAiStudioModel.flash38,
       apiKey: json['apiKey'] ?? '',
-      thinkingLevel: json['thinkingLevel'] ?? 'low',
+      thinkingLevel: GeminiThinkingLevel.fromValue(json['thinkingLevel'] as String?),
     );
   }
 
   GoogleAiStudioConfig copyWith({
     String? modelName,
     String? apiKey,
-    String? thinkingLevel,
+    GeminiThinkingLevel? thinkingLevel,
   }) {
     return GoogleAiStudioConfig(
       modelName: modelName ?? this.modelName,

@@ -50,6 +50,7 @@ class ApiLogManager extends AsyncNotifier<List<ApiLogEntry>> implements IApiLogg
   }
 
   /// 記錄一次 API 或 AI 交互 (內建開關守門)
+  @override
   Future<void> logInteraction(ApiLogRecord record) async {
     try {
       // 1. 開關守門：若設定關閉，直接短路退出，零磁碟 I/O

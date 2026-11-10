@@ -1,3 +1,4 @@
+import 'package:equity_tracker/core/logging/domain/api_log_category.dart';
 import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
 import 'package:equity_tracker/core/logging/domain/i_api_logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,7 +47,12 @@ class StoreLookupResult {
 
 class StoreLookupAgent extends BaseAgent<StoreLookupInput, StoreLookupResult> {
   StoreLookupAgent(AIProvider provider, [IApiLogger? logManager])
-      : super('StoreLookup', provider, logManager: logManager);
+      : super(
+          'StoreLookup',
+          provider,
+          category: ApiLogCategory.aiStoreLookup,
+          logManager: logManager,
+        );
 
   @override
   Future<StoreLookupResult> execute(StoreLookupInput input, {void Function(String)? onChunk}) async {

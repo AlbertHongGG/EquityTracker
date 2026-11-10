@@ -2,7 +2,6 @@ import 'package:intl/intl.dart';
 import 'package:equity_tracker/core/notifications/services/system_notification_service.dart';
 import 'package:equity_tracker/features/category/data/category_repository.dart';
 import 'package:equity_tracker/features/transaction/data/transaction_model.dart';
-import 'package:equity_tracker/core/enums/transaction_type.dart';
 
 class AppNotificationService {
   final SystemNotificationService _systemNotificationService;

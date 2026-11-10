@@ -1,6 +1,23 @@
 import 'package:uuid/uuid.dart';
 
-enum NotificationType { success, error, info, warning }
+enum NotificationType {
+  success,
+  error,
+  info,
+  warning;
+
+  /// 嚴格依據名稱反序列化，若非約定值則安全 Fallback 為 info
+  static NotificationType fromKey(String? key) {
+    if (key == null) return NotificationType.info;
+    final normalized = key.trim().toLowerCase();
+    for (final type in NotificationType.values) {
+      if (type.name == normalized) {
+        return type;
+      }
+    }
+    return NotificationType.info;
+  }
+}
 
 /// 應用程式內部彈窗通知模型 (InAppNotification)
 class InAppNotification {
