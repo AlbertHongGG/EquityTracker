@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:equity_tracker/features/stats/presentation/chart_touch_event_handler.dart';
+import 'package:equity_tracker/features/stats/domain/chart_tooltip_state.dart';
+import 'package:equity_tracker/features/stats/domain/chart_touch_interpreter.dart';
 import 'package:equity_tracker/features/stats/screens/stats_screen/trend_chart_tooltip.dart';
 
 class TrendLineChart extends StatefulWidget {
@@ -28,30 +29,15 @@ class TrendLineChart extends StatefulWidget {
 }
 
 class _TrendLineChartState extends State<TrendLineChart> {
-  late ChartTouchEventHandler _touchHandler;
-
-  @override
-  void initState() {
-    super.initState();
-    _initTouchHandler();
-  }
-
-  void _initTouchHandler() {
-    _touchHandler = ChartTouchEventHandler(
-      daysInMonth: widget.daysInMonth,
-      onTooltipStateChanged: (state) {
-        if (mounted) setState(() {});
-      },
-      onDateSelected: widget.onDateSelected,
-    );
-  }
+  ChartTooltipState _tooltipState = const ChartTooltipState.hidden();
 
   @override
   void didUpdateWidget(TrendLineChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.daysInMonth != widget.daysInMonth ||
-        oldWidget.onDateSelected != widget.onDateSelected) {
-      _initTouchHandler();
+    // 切換不同月份時重置 Tooltip 狀態
+    if (oldWidget.month.year != widget.month.year ||
+        oldWidget.month.month != widget.month.month) {
+      _tooltipState = const ChartTooltipState.hidden();
     }
   }
 
@@ -276,7 +262,26 @@ class _TrendLineChartState extends State<TrendLineChart> {
                     },
                   ),
                   touchCallback: (event, response) {
-                    _touchHandler.handleTouch(event, response);
+                    final nextState = ChartTouchInterpreter.interpret(
+                      event: event,
+                      response: response,
+                      daysInMonth: widget.daysInMonth,
+                      previous: _tooltipState,
+                    );
+
+                    if (nextState != _tooltipState) {
+                      final prevDay = _tooltipState.day;
+                      setState(() {
+                        _tooltipState = nextState;
+                      });
+
+                      // 僅在有效觸控且選中天數變更時通知外層
+                      if (nextState.isVisible &&
+                          nextState.day != null &&
+                          nextState.day != prevDay) {
+                        widget.onDateSelected?.call(nextState.day!);
+                      }
+                    }
                   },
                   handleBuiltInTouches: true,
                 ),
@@ -284,7 +289,7 @@ class _TrendLineChartState extends State<TrendLineChart> {
             ),
             // 獨立懸浮卡片層 (支援平滑淡出與手勢解耦)
             TrendChartTooltip(
-              tooltipState: _touchHandler.currentState,
+              tooltipState: _tooltipState,
               incomeSpots: widget.incomeSpots,
               expenseSpots: widget.expenseSpots,
               daysInMonth: widget.daysInMonth,
