@@ -48,6 +48,41 @@ class TransactionRepository {
     return getTransactionsByDateRange(start, end);
   }
 
+  Future<List<TransactionModel>> getTransactionsByCategoryId(String categoryId) async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'transactions',
+      where: 'categoryId = ? AND syncStatus != ?',
+      whereArgs: [categoryId, SyncStatus.pendingDelete.name],
+      orderBy: 'date DESC, id DESC',
+    );
+    return List.generate(maps.length, (i) => TransactionModel.fromMap(maps[i]));
+  }
+
+  Future<void> batchUpdateTransactionsCategory(
+    Map<int, String> txIdToCategoryId, {
+    required bool markPendingSync,
+  }) async {
+    if (txIdToCategoryId.isEmpty) return;
+    final db = await _dbHelper.database;
+    final batch = db.batch();
+    for (final entry in txIdToCategoryId.entries) {
+      final updateData = <String, dynamic>{
+        'categoryId': entry.value,
+      };
+      if (markPendingSync) {
+        updateData['syncStatus'] = SyncStatus.pendingUpdate.name;
+      }
+      batch.update(
+        'transactions',
+        updateData,
+        where: 'id = ?',
+        whereArgs: [entry.key],
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
   Future<int> getTotalAmountByType(TransactionType type) async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> result = await db.rawQuery(

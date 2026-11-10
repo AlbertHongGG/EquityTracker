@@ -1,14 +1,14 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/core/logging/data/api_log_manager.dart';
 import 'package:equity_tracker/core/logging/domain/i_api_logger.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:equity_tracker/features/ai/domain/models/record_data.dart';
+import 'package:equity_tracker/features/ai/domain/entities/ai_transaction_draft.dart';
 import 'package:equity_tracker/features/ai/infrastructure/agents/base_agent.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/provider_factory.dart';
 import 'package:equity_tracker/features/ai/infrastructure/providers/ai_provider.dart';
 import 'package:equity_tracker/features/ai/infrastructure/agents/validation_agent/prompts.dart';
 
 class ValidationInput {
-  final RecordData record;
+  final AITransactionDraft record;
 
   ValidationInput({required this.record});
 }
@@ -30,7 +30,6 @@ class ValidationResult {
   }
 }
 
-
 class ValidationAgent extends BaseAgent<ValidationInput, ValidationResult> {
   ValidationAgent(AIProvider provider, [IApiLogger? logManager])
       : super('Validation', provider, logManager: logManager);
@@ -42,12 +41,12 @@ class ValidationAgent extends BaseAgent<ValidationInput, ValidationResult> {
 
     String resultText = '';
     final stream = executeStreamPrompt(userPrompt, systemPrompt);
-    
+
     await for (final chunk in stream) {
       resultText += chunk;
       if (onChunk != null) onChunk(chunk);
     }
-    
+
     final map = extractJson<Map<String, dynamic>>(resultText, 'object');
     return ValidationResult.fromMap(map);
   }

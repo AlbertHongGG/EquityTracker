@@ -1,6 +1,6 @@
-import 'package:equity_tracker/features/category/data/category_model.dart';
+import 'package:equity_tracker/features/ai/domain/entities/ai_category_ref.dart';
 
-String buildSystemPrompt(List<CategoryModel> categories, String fallbackCategoryId, String today) {
+String buildSystemPrompt(List<AICategoryRef> categories, String fallbackCategoryId, String today) {
   final categoryListText = categories.map((c) => '- ID: "${c.id}", 名稱: "${c.name}"').join('\n');
 
   return '''你是一個專業的記帳資訊解析助手。

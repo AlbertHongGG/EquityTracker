@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equity_tracker/features/ai/presentation/controllers/ai_session_controller.dart';
 import 'package:equity_tracker/features/ai/presentation/controllers/ai_config_controller.dart';
-import 'package:equity_tracker/features/ai/usecases/process_expense_usecase.dart';
 import 'package:equity_tracker/core/theme/app_colors.dart';
 import 'package:equity_tracker/core/logging/presentation/screens/api_log_viewer_screen.dart';
-import 'package:equity_tracker/features/transaction/data/transaction_model.dart';
 import 'package:equity_tracker/features/ai/presentation/widgets/thinking_orb.dart';
+import 'package:equity_tracker/features/ai/presentation/widgets/action_prompt_cards.dart';
+import 'package:equity_tracker/features/ai/presentation/widgets/attachment_result_cards.dart';
 import 'package:equity_tracker/core/voice/controllers/voice_controller.dart';
-import 'package:go_router/go_router.dart';
 import 'package:equity_tracker/core/notifications/providers/notification_providers.dart';
 import 'dart:math' as math;
 
@@ -37,7 +36,6 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
   @override
   void initState() {
     super.initState();
-    // Initialize speech engine early
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(voiceControllerProvider.notifier).initialize();
     });
@@ -67,18 +65,12 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
     });
   }
 
-  void _handleSubmit() {
-    final text = _controller.text.trim();
+  void _handleSubmit([String? overrideText]) {
+    final text = (overrideText ?? _controller.text).trim();
     if (text.isEmpty) return;
 
-    final sessionState = ref.read(aiSessionControllerProvider);
+    ref.read(aiSessionControllerProvider.notifier).sendMessage(text);
 
-    if (sessionState.pendingAction == null) {
-      ref.read(aiSessionControllerProvider.notifier).startSession(text);
-    } else {
-      ref.read(aiSessionControllerProvider.notifier).submitAnswer(text);
-    }
-    
     _controller.clear();
     _baseTypedText = '';
     ref.read(voiceControllerProvider.notifier).clearText();
@@ -86,7 +78,6 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
 
   void _handleMicToggle(bool isCurrentlyListening) {
     if (!isCurrentlyListening) {
-      // 即將開始語音：將目前輸入框的字鎖定為 _baseTypedText
       _baseTypedText = _controller.text.trim();
     }
     ref.read(voiceControllerProvider.notifier).toggleListening();
@@ -100,18 +91,19 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    ref.listen<AISessionState>(aiSessionControllerProvider, (_, __) => _scrollToBottom());
-    
+    ref.listen<AISessionState>(aiSessionControllerProvider, (previous, next) => _scrollToBottom());
+
     ref.listen<VoiceState>(voiceControllerProvider, (previous, next) {
       if (next.recognizedText != previous?.recognizedText) {
-        final newText = _baseTypedText.isEmpty 
-            ? next.recognizedText 
-            : (_baseTypedText + (next.recognizedText.isNotEmpty ? ' ${next.recognizedText}' : ''));
-            
+        final newText = _baseTypedText.isEmpty
+            ? next.recognizedText
+            : (_baseTypedText +
+                (next.recognizedText.isNotEmpty ? ' ${next.recognizedText}' : ''));
+
         if (_controller.text != newText) {
           _controller.text = newText;
           _controller.selection = TextSelection.fromPosition(
-            TextPosition(offset: _controller.text.length)
+            TextPosition(offset: _controller.text.length),
           );
           _scrollTextFieldToRight();
         }
@@ -122,7 +114,7 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
     });
 
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: keyboardHeight,
@@ -148,39 +140,44 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
             else ...[
               Expanded(
                 child: Container(
-                  color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.5),
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.2)
+                      : Colors.white.withValues(alpha: 0.5),
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                    itemCount: sessionState.messages.length + 
-                               (sessionState.isProcessing ? 1 : 0) + 
-                               (sessionState.pendingAction != null ? 1 : 0),
+                    itemCount: sessionState.messages.length +
+                        (sessionState.isProcessing ? 1 : 0) +
+                        (sessionState.suspendedState != null ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index < sessionState.messages.length) {
                         return _buildChatBubble(sessionState.messages[index], isDark);
                       }
-                      
+
                       int offset = sessionState.messages.length;
-                      
+
                       if (sessionState.isProcessing) {
                         if (index == offset) {
                           return _buildThinkingBubble(sessionState, isDark);
                         }
                         offset++;
                       }
-                      
-                      if (sessionState.pendingAction != null) {
+
+                      if (sessionState.suspendedState != null) {
                         if (index == offset) {
-                          return _buildActionCard(context, sessionState.pendingAction!, isDark);
+                          return ActionPromptCards(
+                            suspendedState: sessionState.suspendedState!,
+                            isDark: isDark,
+                            onOptionSelected: (option) => _handleSubmit(option),
+                          );
                         }
                       }
-                      
+
                       return const SizedBox.shrink();
                     },
                   ),
                 ),
               ),
-
               _buildInputArea(sessionState, voiceState, isDark),
             ],
           ],
@@ -220,7 +217,7 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
             ),
             const SizedBox(height: 12),
             Text(
-              'The AI Smart Accounting assistant is currently disabled. You can enable it in the configuration settings.',
+              'AI 財務助手目前處於停用狀態，請至 AI 引擎設定中開啟。',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -276,7 +273,7 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'AI 智慧記帳',
+                    'AI 智慧財務助手',
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 18,
@@ -339,10 +336,12 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
           if (!isUser) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: isError ? Colors.red.withValues(alpha: 0.1) : Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              backgroundColor: isError
+                  ? Colors.red.withValues(alpha: 0.1)
+                  : Theme.of(context).primaryColor.withValues(alpha: 0.1),
               child: Icon(
-                isError ? Icons.error_outline : Icons.smart_toy_rounded, 
-                size: 16, 
+                isError ? Icons.error_outline : Icons.smart_toy_rounded,
+                size: 16,
                 color: isError ? Colors.red : Theme.of(context).primaryColor,
               ),
             ),
@@ -352,10 +351,10 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isUser 
-                    ? Theme.of(context).primaryColor 
-                    : (isError 
-                        ? Colors.red.withValues(alpha: 0.1) 
+                color: isUser
+                    ? Theme.of(context).primaryColor
+                    : (isError
+                        ? Colors.red.withValues(alpha: 0.1)
                         : (isDark ? AppColors.surfaceDark : Colors.white)),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
@@ -363,116 +362,37 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                   bottomLeft: Radius.circular(isUser ? 20 : 4),
                   bottomRight: Radius.circular(isUser ? 4 : 20),
                 ),
-                boxShadow: isUser || isError ? [] : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+                boxShadow: isUser || isError
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.text,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isUser
+                          ? Colors.white
+                          : (isError
+                              ? Colors.red
+                              : (isDark ? Colors.white : Colors.black87)),
+                    ),
                   ),
+                  if (message.payload != null)
+                    AttachmentResultCards(
+                      payload: message.payload!,
+                      isDark: isDark,
+                    ),
                 ],
               ),
-              child: (message.payload != null && message.payload is List) 
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          message.text,
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: isUser 
-                                ? Colors.white 
-                                : (isError 
-                                    ? Colors.red 
-                                    : (isDark ? Colors.white : Colors.black87)),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...((message.payload as List).map((dynamic item) {
-                          if (item is! TransactionModel) return const SizedBox();
-                          final tx = item;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: () {
-                                  // Close bottom sheet if necessary, or just push. Let's close it first so it doesn't linger
-                                  Navigator.of(context).pop();
-                                  context.push('/add-transaction', extra: {'transaction': tx});
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isDark ? Colors.white12 : Colors.black12,
-                                    ),
-                                  ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(Icons.receipt_long, size: 16, color: Theme.of(context).primaryColor),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        tx.title ?? '未命名',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark ? Colors.white : Colors.black87,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        tx.note ?? '',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: isDark ? Colors.white54 : Colors.black54,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Text(
-                                  '\$${tx.amount.toInt()}',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Outfit',
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  })),
-                      ],
-                    )
-                  : Text(
-                      message.text,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: isUser 
-                            ? Colors.white 
-                            : (isError 
-                                ? Colors.red 
-                                : (isDark ? Colors.white : Colors.black87)),
-                      ),
-                    ),
             ),
           ),
         ],
@@ -534,25 +454,27 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                   if (sessionState.thinkingSteps.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     ...sessionState.thinkingSteps.map((step) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.check_circle_outline, size: 12, color: isDark ? Colors.white54 : Colors.black54),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              step,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.white54 : Colors.black54,
-                                height: 1.2,
+                          padding: const EdgeInsets.only(bottom: 4.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.check_circle_outline,
+                                  size: 12,
+                                  color: isDark ? Colors.white54 : Colors.black54),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  step,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? Colors.white54 : Colors.black54,
+                                    height: 1.2,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    )),
+                        )),
                   ],
                 ],
               ),
@@ -563,103 +485,7 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
     );
   }
 
-  Widget _buildActionCard(BuildContext context, UseCaseResult action, bool isDark) {
-    if (action is RequireStoreSelectionResult) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.storefront_rounded, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    action.message,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (action.options.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: action.options.map((option) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ActionChip(
-                        label: Text(option),
-                        labelStyle: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                        side: BorderSide.none,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        onPressed: () {
-                          _controller.text = option;
-                          _handleSubmit();
-                        },
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ],
-        ),
-      );
-    } else if (action is RequireCorrectionResult) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.help_outline_rounded, color: Colors.orange),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                action.question,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return const SizedBox();
-  }
-
   Widget _buildInputArea(AISessionState sessionState, VoiceState voiceState, bool isDark) {
-    
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
@@ -695,11 +521,15 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                           color: isDark ? Colors.white : Colors.black87,
                         ),
                         decoration: InputDecoration(
-                          hintText: voiceState.isListening 
-                              ? '聆聽中...' 
-                              : (sessionState.pendingAction != null ? '請輸入回答...' : '例如：午餐吃雞腿便當 100 元'),
+                          hintText: voiceState.isListening
+                              ? '聆聽中...'
+                              : (sessionState.suspendedState != null
+                                  ? '請輸入回答...'
+                                  : '記帳、或輸入「幫我重新分類發票」...'),
                           hintStyle: TextStyle(
-                            color: voiceState.isListening ? Theme.of(context).primaryColor : (isDark ? Colors.white30 : Colors.black38),
+                            color: voiceState.isListening
+                                ? Theme.of(context).primaryColor
+                                : (isDark ? Colors.white30 : Colors.black38),
                           ),
                           border: InputBorder.none,
                         ),
@@ -726,18 +556,22 @@ class _AiInputBottomSheetState extends ConsumerState<AiInputBottomSheet> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: voiceState.isListening ? Theme.of(context).primaryColor.withValues(alpha: 0.1) : Colors.transparent,
+                          color: voiceState.isListening
+                              ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+                              : Colors.transparent,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           voiceState.isListening ? Icons.mic : Icons.mic_none,
-                          color: voiceState.isListening ? Theme.of(context).primaryColor : (isDark ? Colors.white54 : Colors.black54),
+                          color: voiceState.isListening
+                              ? Theme.of(context).primaryColor
+                              : (isDark ? Colors.white54 : Colors.black54),
                         ),
                       ),
                     ),
                     IconButton(
                       icon: Icon(Icons.send_rounded, color: Theme.of(context).primaryColor),
-                      onPressed: _handleSubmit,
+                      onPressed: () => _handleSubmit(),
                     ),
                     const SizedBox(width: 4),
                   ],

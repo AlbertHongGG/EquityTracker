@@ -1,13 +1,13 @@
-class RecordData {
-  String? item;
-  int? price;
-  String? store;
-  String? locationClue;
-  int? qty;
-  String? categoryId;
-  String? date;
+class AITransactionDraft {
+  final String? item;
+  final int? price;
+  final String? store;
+  final String? locationClue;
+  final int? qty;
+  final String? categoryId;
+  final String? date;
 
-  RecordData({
+  const AITransactionDraft({
     this.item,
     this.price,
     this.store,
@@ -17,8 +17,8 @@ class RecordData {
     this.date,
   });
 
-  factory RecordData.fromMap(Map<String, dynamic> map) {
-    return RecordData(
+  factory AITransactionDraft.fromMap(Map<String, dynamic> map) {
+    return AITransactionDraft(
       item: map['item'] as String?,
       price: (map['price'] as num?)?.toInt(),
       store: map['store'] as String?,
@@ -41,7 +41,7 @@ class RecordData {
     };
   }
 
-  RecordData copyWith({
+  AITransactionDraft copyWith({
     String? item,
     int? price,
     String? store,
@@ -50,7 +50,7 @@ class RecordData {
     String? categoryId,
     String? date,
   }) {
-    return RecordData(
+    return AITransactionDraft(
       item: item ?? this.item,
       price: price ?? this.price,
       store: store ?? this.store,
@@ -60,4 +60,8 @@ class RecordData {
       date: date ?? this.date,
     );
   }
+
+  @override
+  String toString() =>
+      'AITransactionDraft(item: $item, price: $price, store: $store, date: $date, categoryId: $categoryId)';
 }

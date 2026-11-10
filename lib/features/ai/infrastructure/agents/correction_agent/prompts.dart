@@ -1,8 +1,7 @@
-import 'dart:convert';
+import 'package:equity_tracker/features/ai/domain/entities/ai_category_ref.dart';
 import 'package:equity_tracker/features/ai/infrastructure/agents/correction_agent/correction_agent.dart';
-import 'package:equity_tracker/features/category/data/category_model.dart';
 
-String buildSystemPrompt(List<CategoryModel> categories, String fallbackCategoryId, String today) {
+String buildSystemPrompt(List<AICategoryRef> categories, String fallbackCategoryId, String today) {
   final categoryListText = categories.map((c) => '- ID: "${c.id}", 名稱: "${c.name}"').join('\n');
 
   return '''你是一個資料修正與動態分類助手。你的任務是根據「系統提問」與「使用者的回答」，將舊有的記帳資料進行精準的覆寫、搬移，並**重新評估最適當的分類**。
@@ -41,7 +40,7 @@ $categoryListText
 }
 
 String buildUserPrompt(CorrectionInput input) {
-  final recordJson = jsonEncode(input.record.toMap());
+  final recordJson = input.record.toMap().toString();
   final questionText = input.question ?? "無";
   return '''請根據使用者的回答更新以下資料並重新分類：
 

@@ -19,6 +19,16 @@ enum ApiLogCategory {
     displayName: 'AI 驗證修正',
     icon: Icons.rule_rounded,
   ),
+  aiIntentRouter(
+    key: 'ai_intent_router',
+    displayName: 'AI 意圖路由',
+    icon: Icons.alt_route_rounded,
+  ),
+  aiCategoryCorrection(
+    key: 'ai_category_correction',
+    displayName: 'AI 類別矯正',
+    icon: Icons.auto_fix_high_rounded,
+  ),
   googleMap(
     key: 'google_map',
     displayName: '地圖搜尋',
@@ -50,17 +60,6 @@ enum ApiLogCategory {
     final normalized = key.toLowerCase().trim();
     for (final category in ApiLogCategory.values) {
       if (category.key == normalized) return category;
-    }
-    // 相容性容錯：若檔名帶有 extraction / storelookup 等別名
-    if (normalized.contains('extraction')) return ApiLogCategory.aiExtraction;
-    if (normalized.contains('store')) return ApiLogCategory.aiStoreLookup;
-    if (normalized.contains('validation') || normalized.contains('correction')) {
-      return ApiLogCategory.aiValidation;
-    }
-    if (normalized.contains('map')) return ApiLogCategory.googleMap;
-    if (normalized.contains('notion')) return ApiLogCategory.notionSync;
-    if (normalized.contains('github') || normalized.contains('updater')) {
-      return ApiLogCategory.githubUpdater;
     }
     return null;
   }

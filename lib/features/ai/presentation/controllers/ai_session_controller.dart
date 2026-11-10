@@ -1,56 +1,33 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:equity_tracker/features/ai/domain/models/transaction_session.dart';
-import 'package:equity_tracker/features/ai/usecases/process_expense_usecase.dart';
-import 'package:equity_tracker/features/transaction/data/transaction_model.dart';
-import 'package:equity_tracker/core/enums/transaction_type.dart';
-import 'package:equity_tracker/features/transaction/providers/transaction_notifier.dart';
-import 'package:equity_tracker/features/category/providers/category_notifier.dart';
+import 'package:equity_tracker/features/ai/domain/models/chat_message.dart';
+import 'package:equity_tracker/features/ai/domain/models/workflow_step_result.dart';
+import 'package:equity_tracker/features/ai/application/orchestrator/ai_orchestrator.dart';
 
-enum ChatMessageType { user, ai, system, error }
-
-class ChatMessage {
-  final String id;
-  final String text;
-  final ChatMessageType type;
-  final dynamic payload;
-  final DateTime timestamp;
-
-  ChatMessage({
-    required this.id,
-    required this.text,
-    required this.type,
-    this.payload,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-}
+export 'package:equity_tracker/features/ai/domain/models/chat_message.dart';
 
 class AISessionState {
-  final TransactionSession? session;
   final bool isProcessing;
-  final UseCaseResult? pendingAction;
+  final WorkflowSuspendedState? suspendedState;
   final List<ChatMessage> messages;
   final List<String> thinkingSteps;
 
   AISessionState({
-    this.session,
     this.isProcessing = false,
-    this.pendingAction,
+    this.suspendedState,
     this.messages = const [],
     this.thinkingSteps = const [],
   });
 
   AISessionState copyWith({
-    TransactionSession? session,
     bool? isProcessing,
-    UseCaseResult? pendingAction,
-    bool clearPendingAction = false,
+    WorkflowSuspendedState? suspendedState,
+    bool clearSuspendedState = false,
     List<ChatMessage>? messages,
     List<String>? thinkingSteps,
   }) {
     return AISessionState(
-      session: session ?? this.session,
       isProcessing: isProcessing ?? this.isProcessing,
-      pendingAction: clearPendingAction ? null : (pendingAction ?? this.pendingAction),
+      suspendedState: clearSuspendedState ? null : (suspendedState ?? this.suspendedState),
       messages: messages ?? this.messages,
       thinkingSteps: thinkingSteps ?? this.thinkingSteps,
     );
@@ -63,7 +40,7 @@ class AISessionController extends Notifier<AISessionState> {
     return AISessionState();
   }
 
-  void _addMessage(String text, ChatMessageType type, {dynamic payload}) {
+  void _addMessage(String text, ChatMessageType type, {ChatAttachmentPayload? payload}) {
     final msg = ChatMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       text: text,
@@ -77,123 +54,58 @@ class AISessionController extends Notifier<AISessionState> {
     state = state.copyWith(thinkingSteps: [...state.thinkingSteps, msg]);
   }
 
-  Future<void> startSession(String input) async {
-    _addMessage(input, ChatMessageType.user);
-    
-    final session = TransactionSession(input);
+  Future<void> sendMessage(String input) async {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return;
+
+    _addMessage(trimmed, ChatMessageType.user);
+
+    final currentSuspended = state.suspendedState;
     state = state.copyWith(
-      session: session, 
       isProcessing: true,
       thinkingSteps: [],
+      clearSuspendedState: true,
     );
 
     try {
-      final useCase = ref.read(processExpenseUseCaseProvider);
-      final categories = ref.read(categoryListProvider).value ?? [];
-      final result = await useCase.execute(session, categories, onProgress: _addProgress);
-      
+      final orchestrator = ref.read(aiOrchestratorProvider);
+      final result = await orchestrator.handleInput(
+        trimmed,
+        suspendedState: currentSuspended,
+        onProgress: _addProgress,
+      );
+
       _handleResult(result);
-    } catch (e, st) {
-      _addMessage('發生錯誤: $e', ChatMessageType.error);
-      state = state.copyWith(isProcessing: false);
-      print(st);
+    } catch (e) {
+      _addMessage('處理時發生異常: $e', ChatMessageType.error);
+      state = state.copyWith(isProcessing: false, clearSuspendedState: true);
     }
   }
 
-  Future<void> submitAnswer(String answer) async {
-    if (state.pendingAction == null || state.session == null) return;
-
-    final action = state.pendingAction!;
-    state = state.copyWith(
-      isProcessing: true, 
-      clearPendingAction: true,
-      thinkingSteps: [], // Reset thinking steps
-    );
-    _addMessage(answer, ChatMessageType.user);
-
-    try {
-      final useCase = ref.read(processExpenseUseCaseProvider);
-      int recordIndex = 0;
-      
-      if (action is RequireStoreSelectionResult) {
-        recordIndex = action.recordIndex;
-      } else if (action is RequireCorrectionResult) {
-        recordIndex = action.recordIndex;
-      }
-
-      final categories = ref.read(categoryListProvider).value ?? [];
-      final result = await useCase.handleUserCorrection(
-        state.session!, 
-        recordIndex, 
-        answer,
-        categories,
-        action,
-        onProgress: _addProgress
-      );
-      
-      _handleResult(result);
-    } catch (e, st) {
-      _addMessage('發生錯誤: $e', ChatMessageType.error);
-      state = state.copyWith(isProcessing: false);
-      print(st);
+  void _handleResult(WorkflowStepResult result) {
+    switch (result) {
+      case WorkflowRequiresInput(:final suspendedState):
+        state = state.copyWith(
+          isProcessing: false,
+          suspendedState: suspendedState,
+        );
+      case WorkflowCompleted(:final message, :final payload):
+        _addMessage(message, ChatMessageType.ai, payload: payload);
+        state = state.copyWith(
+          isProcessing: false,
+          clearSuspendedState: true,
+        );
+      case WorkflowFailed(:final errorMessage):
+        _addMessage(errorMessage, ChatMessageType.error);
+        state = state.copyWith(
+          isProcessing: false,
+          clearSuspendedState: true,
+        );
     }
-  }
-
-  Future<void> _handleResult(UseCaseResult result) async {
-    if (result is SuccessResult) {
-      await _saveRecordsToDatabase();
-      state = state.copyWith(isProcessing: false, clearPendingAction: true);
-    } else {
-      state = state.copyWith(
-        isProcessing: false,
-        pendingAction: result,
-      );
-    }
-  }
-
-  Future<void> _saveRecordsToDatabase() async {
-    final session = state.session;
-    if (session == null || session.records.isEmpty) {
-      _addMessage('沒有可儲存的紀錄。', ChatMessageType.error);
-      return;
-    }
-
-    _addProgress('正在儲存 ${session.records.length} 筆資料...');
-    final transactionNotifier = ref.read(transactionNotifierProvider.notifier);
-    
-    int savedCount = 0;
-    final savedTxs = <TransactionModel>[];
-    for (final record in session.records) {
-      final data = record.data;
-      if (data.price == null || data.item == null) continue;
-
-      final title = (data.store != null && data.store!.isNotEmpty) ? data.store! : data.item!;
-      final note = data.item!;
-      
-      DateTime txDate = DateTime.now();
-      if (data.date != null && data.date!.isNotEmpty) {
-        txDate = DateTime.tryParse(data.date!) ?? DateTime.now();
-      }
-      
-      final tx = TransactionModel(
-        title: title,
-        amount: data.price!,
-        categoryId: data.categoryId ?? 'other',
-        type: TransactionType.expense,
-        date: txDate,
-        createdAt: DateTime.now(),
-        note: note,
-      );
-      
-      await transactionNotifier.addTransaction(tx);
-      savedTxs.add(tx);
-      savedCount++;
-    }
-
-    _addMessage('成功新增 $savedCount 筆帳務！', ChatMessageType.ai, payload: savedTxs);
   }
 }
 
-final aiSessionControllerProvider = NotifierProvider<AISessionController, AISessionState>(
+final aiSessionControllerProvider =
+    NotifierProvider<AISessionController, AISessionState>(
   AISessionController.new,
 );
